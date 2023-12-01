@@ -1,0 +1,9 @@
+[workspace]
+resolver = "2"
+
+members = [
+    "virtual-actor",
+    "virtual-actor-derive",
+    "virtual-actor-runtime",
+    "test-bench", "virtual-actor-runtime",
+]
