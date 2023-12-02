@@ -4,9 +4,7 @@ use std::sync::Arc;
 
 use virtual_actor::{Actor, Message, MessageEnvelopeFactory, MessageHandler};
 
-use tokio::sync::mpsc::UnboundedSender;
-
-use super::one_shot_responder::OneshotResponder;
+use super::{mailbox::MailboxDispatcher, one_shot_responder::OneshotResponder};
 
 /// Message dispatcher error
 #[derive(thiserror::Error, Debug)]
@@ -23,12 +21,12 @@ pub enum DispatcherError {
 #[derive(Clone)]
 pub struct MessageDispatcher<A: Actor> {
     /// Sender for mailbox
-    mailbox_sender: Arc<UnboundedSender<A::MessagesEnvelope>>,
+    mailbox_sender: Arc<MailboxDispatcher<A::MessagesEnvelope>>,
 }
 
 impl<A: Actor> MessageDispatcher<A> {
     /// Creates new message dispatcher
-    pub fn new(mailbox_sender: UnboundedSender<A::MessagesEnvelope>) -> Self {
+    pub fn new(mailbox_sender: MailboxDispatcher<A::MessagesEnvelope>) -> Self {
         Self {
             mailbox_sender: Arc::new(mailbox_sender),
         }

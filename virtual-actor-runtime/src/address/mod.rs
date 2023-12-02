@@ -1,5 +1,5 @@
-mod addr;
 mod actor_handle;
+mod addr;
 
-pub use addr::{Addr, WeakRef};
 pub use actor_handle::ActorHandle;
+pub use addr::{Addr, WeakRef};

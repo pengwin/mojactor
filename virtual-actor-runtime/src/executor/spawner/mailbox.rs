@@ -1,74 +1,28 @@
 //! Mailbox for local spawner
 
-use tokio::{
-    select,
-    sync::mpsc::{UnboundedReceiver, UnboundedSender},
-};
 use tokio_util::sync::CancellationToken;
 
 use super::super::local_actor::LocalActor;
+use crate::messaging::{Mailbox as BaseMailbox, MailboxDispatcher};
 
 /// Dispatcher for `LocalSpawner`
-pub type SpawnerDispatcher = UnboundedSender<Box<dyn LocalActor>>;
+pub type SpawnerDispatcher = MailboxDispatcher<Box<dyn LocalActor>>;
 
 /// Mailbox for `LocalSpawner`
 pub struct Mailbox {
-    /// Mailbox channel
-    receiver: UnboundedReceiver<Box<dyn LocalActor>>,
-    /// Message receiving cancellation token
-    receiver_cancellation: CancellationToken,
-    /// is closed
-    closed: bool,
+    inner: BaseMailbox<Box<dyn LocalActor>>,
 }
 
 impl Mailbox {
     /// Creates new mailbox
     pub fn new(mailbox_cancellation: &CancellationToken) -> (SpawnerDispatcher, Self) {
-        let (dispatcher, mailbox) = tokio::sync::mpsc::unbounded_channel::<Box<dyn LocalActor>>();
-        (
-            dispatcher,
-            Self {
-                closed: false,
-                receiver: mailbox,
-                receiver_cancellation: mailbox_cancellation.clone(),
-            },
-        )
+        let (dispatcher, inner) = BaseMailbox::new(mailbox_cancellation);
+        (dispatcher, Self { inner })
     }
 
     /// Receive message from mailbox
     pub async fn recv(&mut self, ct: &CancellationToken) -> Option<Box<dyn LocalActor>> {
-        if !self.closed && self.receiver_cancellation.is_cancelled() {
-            self.receiver.close();
-            self.closed = true;
-        }
-
-        if self.closed {
-            self.recv_with_ct(ct).await
-        } else {
-            self.recv_with_mailbox_ct(ct).await
-        }
-    }
-
-    async fn recv_with_mailbox_ct(
-        &mut self,
-        ct: &CancellationToken,
-    ) -> Option<Box<dyn LocalActor>> {
-        let mailbox_ct = self.receiver_cancellation.clone();
-        select! {
-            () = mailbox_ct.cancelled() => {
-                self.receiver.close();
-                self.closed = true;
-                self.recv_with_ct(&ct.clone()).await
-            },
-            envelope = self.recv_with_ct(ct) => envelope,
-        }
-    }
-
-    async fn recv_with_ct(&mut self, ct: &CancellationToken) -> Option<Box<dyn LocalActor>> {
-        select! {
-            () = ct.cancelled() => None,
-            envelope = self.receiver.recv() => envelope,
-        }
+        self.inner.recv(ct).await
     }
 }
 
