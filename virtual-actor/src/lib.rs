@@ -30,4 +30,3 @@ pub use responder_trait::ResponderError;
 // Export virtual actor traits
 pub use virtual_actor_trait::VirtualActor;
 pub use virtual_message_trait::VirtualMessage;
-

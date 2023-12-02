@@ -1,11 +1,9 @@
 //! Runtime context for actor.
 
-use std::marker::PhantomData;
-
 use tokio_util::sync::CancellationToken;
 use virtual_actor::{Actor, ActorContext};
 
-use crate::{addr::Addr, context_factory_trait::ActorContextFactory};
+use crate::address::Addr;
 
 /// Runtime context for actor.
 pub struct RuntimeContext<A: Actor> {
@@ -13,6 +11,15 @@ pub struct RuntimeContext<A: Actor> {
     self_addr: Addr<A>,
     /// Cancellation token
     cancellation_token: CancellationToken,
+}
+
+impl<A: Actor> RuntimeContext<A> {
+    pub(crate) fn new(self_addr: Addr<A>, cancellation_token: CancellationToken) -> Self {
+        Self {
+            self_addr,
+            cancellation_token,
+        }
+    }
 }
 
 impl<A> Clone for RuntimeContext<A>
@@ -44,34 +51,5 @@ impl<A: Actor> RuntimeContext<A> {
     #[must_use]
     pub fn cancellation_token(&self) -> &CancellationToken {
         &self.cancellation_token
-    }
-}
-
-/// Runtime context factory
-pub struct RuntimeContextFactory<A: Actor> {
-    /// Phantom data
-    _a: PhantomData<fn(A) -> A>,
-}
-
-impl<A: Actor> Default for RuntimeContextFactory<A> {
-    fn default() -> Self {
-        Self { _a: PhantomData }
-    }
-}
-
-impl<A> ActorContextFactory<A> for RuntimeContextFactory<A>
-where
-    A: Actor<ActorContext = RuntimeContext<A>> + 'static,
-    A::ActorContext: ActorContext<A, Addr = Addr<A>>,
-{
-    fn create_context(
-        &self,
-        addr: Addr<A>,
-        cancellation_token: &CancellationToken,
-    ) -> A::ActorContext {
-        RuntimeContext {
-            self_addr: addr,
-            cancellation_token: cancellation_token.clone(),
-        }
     }
 }

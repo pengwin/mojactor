@@ -3,7 +3,7 @@
 use tokio_util::sync::CancellationToken;
 use virtual_actor::{Actor, ActorContext};
 
-use crate::addr::Addr;
+use crate::address::Addr;
 
 /// Context factory
 pub trait ActorContextFactory<A>: Send + Sync + 'static

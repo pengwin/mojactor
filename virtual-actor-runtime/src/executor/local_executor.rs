@@ -11,9 +11,9 @@ use virtual_actor::Actor;
 use virtual_actor::ActorContext;
 use virtual_actor::ActorFactory;
 
-use crate::actor_handle::ActorHandle;
-use crate::addr::Addr;
-use crate::context_factory_trait::ActorContextFactory;
+use crate::address::ActorHandle;
+use crate::address::Addr;
+use crate::context::ActorContextFactory;
 use crate::utils::waiter::waiter;
 use crate::utils::waiter::WaitError;
 use crate::utils::GracefulShutdown;

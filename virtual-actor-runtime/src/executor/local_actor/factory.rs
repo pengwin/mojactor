@@ -3,7 +3,7 @@ use std::sync::{Arc, OnceLock};
 use tokio_util::sync::CancellationToken;
 use virtual_actor::{Actor, ActorContext, ActorFactory};
 
-use crate::{actor_handle::ActorHandle, context_factory_trait::ActorContextFactory, Addr};
+use crate::{address::ActorHandle, context::ActorContextFactory, Addr};
 
 use super::{local_actor_impl::LocalActorImpl, local_actor_trait::LocalActor};
 

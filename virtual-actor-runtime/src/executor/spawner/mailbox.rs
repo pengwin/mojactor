@@ -49,7 +49,10 @@ impl Mailbox {
         }
     }
 
-    async fn recv_with_mailbox_ct(&mut self, ct: &CancellationToken) -> Option<Box<dyn LocalActor>> {
+    async fn recv_with_mailbox_ct(
+        &mut self,
+        ct: &CancellationToken,
+    ) -> Option<Box<dyn LocalActor>> {
         let mailbox_ct = self.receiver_cancellation.clone();
         select! {
             () = mailbox_ct.cancelled() => {

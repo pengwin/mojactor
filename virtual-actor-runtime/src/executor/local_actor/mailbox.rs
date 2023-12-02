@@ -7,7 +7,7 @@ use tokio::{
 use tokio_util::sync::CancellationToken;
 use virtual_actor::Actor;
 
-use crate::message_dispatcher::MessageDispatcher;
+use crate::messaging::MessageDispatcher;
 
 /// Mailbox for actor
 pub struct Mailbox<A: Actor> {
@@ -48,7 +48,10 @@ impl<A: Actor> Mailbox<A> {
         }
     }
 
-    async fn recv_with_mailbox_ct(&mut self, ct: &CancellationToken) -> Option<A::MessagesEnvelope> {
+    async fn recv_with_mailbox_ct(
+        &mut self,
+        ct: &CancellationToken,
+    ) -> Option<A::MessagesEnvelope> {
         let mailbox_ct = self.receiver_cancellation.clone();
         let clone_ct = ct.clone();
         select! {

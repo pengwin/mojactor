@@ -6,7 +6,7 @@ use virtual_actor::{Actor, Message, MessageEnvelopeFactory, MessageHandler};
 
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::one_shot_responder::OneshotResponder;
+use super::one_shot_responder::OneshotResponder;
 
 /// Message dispatcher error
 #[derive(thiserror::Error, Debug)]

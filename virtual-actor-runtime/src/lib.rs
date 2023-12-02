@@ -1,17 +1,14 @@
 //! Tokio based runtime for virtual-actor
 
-mod actor_handle;
-mod addr;
-mod context_factory_trait;
+mod address;
+mod context;
 mod executor;
-mod message_dispatcher;
-mod one_shot_responder;
-mod runtime_context;
+mod messaging;
 mod utils;
 
-pub use addr::{Addr, WeakRef};
+pub use address::{Addr, WeakRef};
+pub use context::{RuntimeContext, RuntimeContextFactory};
 pub use executor::LocalExecutor;
-pub use runtime_context::{RuntimeContext, RuntimeContextFactory};
 pub use utils::waiter::WaitError;
 pub use utils::GracefulShutdown;
 
@@ -25,5 +22,3 @@ pub mod prelude {
     pub use virtual_actor_derive::VirtualActor;
     pub use virtual_actor_derive::VirtualMessage;
 }
-
-

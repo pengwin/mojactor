@@ -6,7 +6,7 @@ use virtual_actor::{
     Actor, ActorAddr, AddrError, Message, MessageEnvelopeFactory, MessageHandler, WeakActorRef,
 };
 
-use crate::actor_handle::ActorHandle;
+use super::actor_handle::ActorHandle;
 
 /// Actor address
 pub struct Addr<A: Actor> {

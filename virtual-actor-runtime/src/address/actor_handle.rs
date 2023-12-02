@@ -7,7 +7,7 @@ use tokio_util::sync::CancellationToken;
 use virtual_actor::{Actor, AddrError, Message, MessageEnvelopeFactory, MessageHandler};
 
 use crate::{
-    message_dispatcher::MessageDispatcher,
+    messaging::MessageDispatcher,
     utils::waiter::{waiter, WaitError},
     utils::GracefulShutdown,
     Addr,

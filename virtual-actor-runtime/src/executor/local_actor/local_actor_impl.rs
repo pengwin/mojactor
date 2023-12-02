@@ -2,8 +2,9 @@
 
 use std::{any::Any, marker::PhantomData, panic::AssertUnwindSafe, sync::Arc};
 
+use crate::context::ActorContextFactory;
 use crate::executor::actor_registry::ActorRegistry;
-use crate::{actor_handle::ActorHandle, addr::Addr, context_factory_trait::ActorContextFactory};
+use crate::{address::ActorHandle, address::Addr};
 use futures::FutureExt;
 use tokio::{select, sync::Notify};
 use virtual_actor::{Actor, ActorContext, ActorFactory};
