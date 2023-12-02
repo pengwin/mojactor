@@ -1,9 +1,8 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, sync::Arc};
 
-use tokio_util::sync::CancellationToken;
 use virtual_actor::{Actor, ActorContext};
 
-use crate::Addr;
+use crate::{address::ActorHandle, Addr};
 
 use super::{context_factory_trait::ActorContextFactory, runtime_context::RuntimeContext};
 
@@ -24,11 +23,12 @@ where
     A: Actor<ActorContext = RuntimeContext<A>> + 'static,
     A::ActorContext: ActorContext<A, Addr = Addr<A>>,
 {
-    fn create_context(
-        &self,
-        addr: Addr<A>,
-        cancellation_token: &CancellationToken,
-    ) -> A::ActorContext {
-        RuntimeContext::new(addr, cancellation_token.clone())
+    fn create_context(&self, handle: &Arc<ActorHandle<A>>) -> A::ActorContext {
+        let addr = Addr::new(handle);
+        RuntimeContext::new(
+            addr,
+            handle.mailbox_cancellation(),
+            handle.cancellation_token(),
+        )
     }
 }

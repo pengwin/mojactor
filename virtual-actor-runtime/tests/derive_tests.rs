@@ -64,6 +64,20 @@ impl virtual_actor::ActorContext<TestActorWithContext> for TestContext {
     fn stop(&self) {
         todo!()
     }
+
+    type CancellationToken = TestCancellationToken;
+
+    fn cancellation_token(&self) -> &Self::CancellationToken {
+        &TestCancellationToken
+    }
+}
+
+struct TestCancellationToken;
+
+impl virtual_actor::CancellationToken for TestCancellationToken {
+    async fn cancelled(&self) {
+        todo!()
+    }
 }
 
 #[derive(Actor, VirtualActor)]

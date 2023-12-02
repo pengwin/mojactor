@@ -1,9 +1,10 @@
 //! Context factory trait
 
-use tokio_util::sync::CancellationToken;
+use std::sync::Arc;
+
 use virtual_actor::{Actor, ActorContext};
 
-use crate::address::Addr;
+use crate::address::{ActorHandle, Addr};
 
 /// Context factory
 pub trait ActorContextFactory<A>: Send + Sync + 'static
@@ -12,9 +13,5 @@ where
     A::ActorContext: ActorContext<A, Addr = Addr<A>>,
 {
     /// Creates new context
-    fn create_context(
-        &self,
-        addr: <A::ActorContext as ActorContext<A>>::Addr,
-        cancellation_token: &CancellationToken,
-    ) -> A::ActorContext;
+    fn create_context(&self, handle: &Arc<ActorHandle<A>>) -> A::ActorContext;
 }

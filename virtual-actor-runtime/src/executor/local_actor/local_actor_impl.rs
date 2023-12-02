@@ -65,8 +65,7 @@ where
     ) -> Result<(), ActorTaskError> {
         let mut actor = actor_factory.create_actor();
 
-        let addr = Addr::new(&handle);
-        let context = context_factory.create_context(addr, handle.cancellation_token());
+        let context = context_factory.create_context(&handle);
 
         let task_ct = handle.cancellation_token();
         while let Some(envelope) = mailbox.recv(task_ct).await {

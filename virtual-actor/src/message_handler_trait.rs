@@ -24,8 +24,8 @@ mod tests {
     use crate::{
         actor_addr::{ActorAddr, AddrError},
         responder_trait::ResponderError,
-        Actor, ActorContext, Message, MessageEnvelope, MessageEnvelopeFactory, Responder,
-        WeakActorRef,
+        Actor, ActorContext, CancellationToken, Message, MessageEnvelope, MessageEnvelopeFactory,
+        Responder, WeakActorRef,
     };
 
     use super::MessageHandler;
@@ -159,11 +159,20 @@ mod tests {
         }
     }
 
+    struct TestCancellationToken;
+
+    impl CancellationToken for TestCancellationToken {
+        async fn cancelled(&self) {
+            todo!()
+        }
+    }
+
     #[derive(Clone)]
     struct TestContext;
 
     impl ActorContext<TestActor> for TestContext {
         type Addr = TestAddr;
+        type CancellationToken = TestCancellationToken;
 
         fn self_addr(&self) -> &Self::Addr {
             &TestAddr
@@ -171,6 +180,10 @@ mod tests {
 
         fn stop(&self) {
             todo!()
+        }
+
+        fn cancellation_token(&self) -> &Self::CancellationToken {
+            &TestCancellationToken
         }
     }
 
