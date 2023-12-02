@@ -2,11 +2,12 @@
 
 use std::{any::Any, marker::PhantomData, panic::AssertUnwindSafe, sync::Arc};
 
+use super::actor_loop::ActorLoop;
 use crate::context::ActorContextFactory;
 use crate::executor::actor_registry::ActorRegistry;
 use crate::{address::ActorHandle, address::Addr};
 use futures::FutureExt;
-use tokio::{select, sync::Notify};
+use tokio::sync::Notify;
 use virtual_actor::{Actor, ActorContext, ActorFactory};
 
 use super::handle::{generate_actor_id, ActorId, ActorTaskJoinHandle, LocalActorHandle};
@@ -15,7 +16,7 @@ use super::{error::ActorTaskError, local_actor_trait::LocalActor, mailbox::Mailb
 /// Local actor implementation
 pub struct LocalActorImpl<A, AF, CF>
 where
-    A: Actor + 'static,
+    A: Actor + ActorLoop<A, AF, CF> + 'static,
     A::ActorContext: ActorContext<A, Addr = Addr<A>>,
     AF: ActorFactory<A> + 'static,
     CF: ActorContextFactory<A> + 'static,
@@ -32,7 +33,7 @@ where
 
 impl<A, AF, CF> LocalActorImpl<A, AF, CF>
 where
-    A: Actor + 'static,
+    A: Actor + ActorLoop<A, AF, CF> + 'static,
     A::ActorContext: ActorContext<A, Addr = Addr<A>>,
     AF: ActorFactory<A> + 'static,
     CF: ActorContextFactory<A> + 'static,
@@ -55,26 +56,6 @@ where
             context_factory: context_factory.clone(),
             handle: handle.clone(),
         }
-    }
-
-    async fn actor_loop(
-        mut mailbox: Mailbox<A>,
-        actor_factory: Arc<AF>,
-        context_factory: Arc<CF>,
-        handle: Arc<ActorHandle<A>>,
-    ) -> Result<(), ActorTaskError> {
-        let mut actor = actor_factory.create_actor();
-
-        let context = context_factory.create_context(&handle);
-
-        let task_ct = handle.cancellation_token();
-        while let Some(envelope) = mailbox.recv(task_ct).await {
-            select! {
-                r = actor.handle_envelope(envelope, &context) => r.map_err(ActorTaskError::ResponderError),
-                () = task_ct.cancelled() => Err(ActorTaskError::Cancelled),
-            }?;
-        }
-        Ok(())
     }
 
     fn unwind_panic(
@@ -112,7 +93,7 @@ where
         let actor_registry = actor_registry.clone();
         let stop_notify = handle.stop_notify().clone();
         tokio::task::spawn_local(
-            AssertUnwindSafe(Self::actor_loop(
+            AssertUnwindSafe(A::actor_loop(
                 mailbox,
                 self.actor_factory.clone(),
                 self.context_factory.clone(),
@@ -133,7 +114,9 @@ where
     CF: ActorContextFactory<A> + 'static,
 {
     fn spawn(&self, actor_registry: &ActorRegistry) {
-        let (dispatcher, mailbox) = Mailbox::<A>::new(self.handle.mailbox_cancellation());
+        let mailbox_preferences = self.actor_factory.mailbox_preferences();
+        let (dispatcher, mailbox) =
+            Mailbox::<A>::new(mailbox_preferences, self.handle.mailbox_cancellation());
 
         self.handle
             .set_dispatcher(dispatcher)

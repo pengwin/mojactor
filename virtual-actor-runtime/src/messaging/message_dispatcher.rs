@@ -2,19 +2,26 @@
 
 use std::sync::Arc;
 
+use tokio::sync::mpsc::error::TrySendError;
 use virtual_actor::{Actor, Message, MessageEnvelopeFactory, MessageHandler};
 
-use super::{mailbox::MailboxDispatcher, one_shot_responder::OneshotResponder};
+use super::{mailbox::MailboxDispatcher, one_shot_responder::OneshotResponder, MailboxError};
 
 /// Message dispatcher error
 #[derive(thiserror::Error, Debug)]
 pub enum DispatcherError {
     /// Mailbox send error
     #[error("Mailbox error: {0}")]
-    MailBoxError(String),
+    MailBoxError(#[from] MailboxError),
     /// Response receiver error
     #[error("Response receiver error: {0}")]
     ResponseReceiverError(#[from] tokio::sync::oneshot::error::RecvError),
+}
+
+impl DispatcherError {
+    pub fn from_try_send_error<T>(e: TrySendError<T>) -> Self {
+        Self::MailBoxError(MailboxError::from_try_send_error(e))
+    }
 }
 
 /// Message dispatcher for `Actor`
@@ -44,8 +51,8 @@ impl<A: Actor> MessageDispatcher<A> {
         let (responder, receiver) = OneshotResponder::new();
         let envelope = A::MessagesEnvelope::from_message(msg, Some(responder));
         self.mailbox_sender
-            .send(envelope)
-            .map_err(|e| DispatcherError::MailBoxError(format!("{e}")))?;
+            .try_send(envelope)
+            .map_err(DispatcherError::from_try_send_error)?;
 
         let a = receiver.await?;
 
@@ -61,8 +68,8 @@ impl<A: Actor> MessageDispatcher<A> {
     {
         let envelope = A::MessagesEnvelope::from_message(msg, None::<OneshotResponder<M>>);
         self.mailbox_sender
-            .send(envelope)
-            .map_err(|e| DispatcherError::MailBoxError(format!("{e}")))?;
+            .try_send(envelope)
+            .map_err(DispatcherError::from_try_send_error)?;
 
         Ok(())
     }

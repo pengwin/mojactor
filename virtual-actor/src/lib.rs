@@ -4,9 +4,11 @@ pub mod names;
 
 mod actor_addr;
 mod actor_context_trait;
+mod actor_factory_trait;
 mod actor_id_trait;
 mod actor_trait;
 mod cancellation_token_trait;
+mod mailbox_preferences;
 mod message_envelope_trait;
 mod message_handler_trait;
 mod message_trait;
@@ -21,8 +23,10 @@ pub use uuid::Uuid;
 // Export actor traits
 pub use actor_addr::{ActorAddr, AddrError, WeakActorRef};
 pub use actor_context_trait::ActorContext;
-pub use actor_trait::{Actor, ActorFactory};
+pub use actor_factory_trait::ActorFactory;
+pub use actor_trait::Actor;
 pub use cancellation_token_trait::CancellationToken;
+pub use mailbox_preferences::MailboxPreferences;
 pub use message_envelope_trait::{MessageEnvelope, MessageEnvelopeFactory};
 pub use message_handler_trait::MessageHandler;
 pub use message_trait::Message;

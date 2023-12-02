@@ -25,6 +25,7 @@ use super::local_actor;
 use super::local_set_wrapper::LocalSetWrapper;
 use super::spawner::LocalSpawner;
 use super::spawner::SpawnerDispatcher;
+use super::ExecutorPreferences;
 
 /// Std thread handle
 type ThreadHandle = std::thread::JoinHandle<()>;
@@ -88,12 +89,26 @@ impl GracefulShutdown for LocalExecutor {
 
 impl LocalExecutor {
     /// Starts executor thread
+    /// with preferences
     ///
     /// # Errors
     ///
     /// Returns error if executor thread is not started
     /// Returns error if spawner was not send
     pub fn new() -> Result<Self, LocalExecutorError> {
+        let preferences = ExecutorPreferences::default();
+        Self::with_preferences(preferences)
+    }
+
+    /// Starts executor thread
+    /// with preferences
+    ///
+    /// # Errors
+    ///
+    /// Returns error if executor thread is not started
+    /// Returns error if spawner was not send
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn with_preferences(preferences: ExecutorPreferences) -> Result<Self, LocalExecutorError> {
         let registry = ActorRegistry::new();
 
         let executor_cancellation = CancellationToken::new();
@@ -102,6 +117,7 @@ impl LocalExecutor {
         let thread_stopped_notify = Arc::new(Notify::new());
 
         let spawner = LocalSpawner::new(
+            &preferences.mailbox_preferences,
             registry.clone(),
             &mailbox_cancellation.child_token(),
             &executor_cancellation.child_token(),

@@ -5,10 +5,11 @@ use std::sync::Arc;
 use futures::FutureExt;
 use tokio::sync::Notify;
 use tokio_util::sync::CancellationToken;
+use virtual_actor::MailboxPreferences;
 
 use crate::{executor::actor_registry::ActorRegistry, utils::GracefulShutdownHandle};
 
-use super::mailbox::{Mailbox, SpawnerDispatcher};
+use super::{mailbox::Mailbox, SpawnerDispatcher};
 
 /// Local spawner.
 /// Spawns actors on `LocalSet`
@@ -24,11 +25,12 @@ pub struct LocalSpawner {
 impl LocalSpawner {
     /// Creates new `LocalSpawner`
     pub fn new(
+        mailbox_preferences: &MailboxPreferences,
         actor_registry: ActorRegistry,
         mailbox_cancellation: &CancellationToken,
         cancellation_token: &CancellationToken,
     ) -> Self {
-        let (dispatcher, mailbox) = Mailbox::new(mailbox_cancellation);
+        let (dispatcher, mailbox) = Mailbox::new(mailbox_preferences, mailbox_cancellation);
         let stopped_notify = Arc::new(Notify::new());
         Self {
             mailbox,

@@ -10,23 +10,16 @@ use std::{
     time::{Duration, Instant},
 };
 
-use hello_actor::{HelloActor, HelloMessage};
+use hello_actor::HelloMessage;
 use virtual_actor_runtime::prelude::*;
 use virtual_actor_runtime::{GracefulShutdown, WaitError};
 use virtual_actor_runtime::{LocalExecutor, RuntimeContextFactory};
 
 use crate::{
+    hello_actor::HelloActorFactory,
     infinite_loop_actor::{InfiniteLoopActorFactory, PendingTask, ThreadSleepTask},
     ping_pong_actor::{Ping, PingPongActorFactory},
 };
-
-struct HelloActorFactory {}
-
-impl ActorFactory<HelloActor> for HelloActorFactory {
-    fn create_actor(&self) -> HelloActor {
-        HelloActor::new()
-    }
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -43,7 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn bench_spawn_wait_shutdown() -> Result<(), Box<dyn std::error::Error>> {
     println!("bench_spawn_wait_shutdown");
 
-    let actor_factory = Arc::new(HelloActorFactory {});
+    let actor_factory = Arc::new(HelloActorFactory::default());
     let context_factory = Arc::new(RuntimeContextFactory::default());
 
     let mut executor = LocalExecutor::new()?;

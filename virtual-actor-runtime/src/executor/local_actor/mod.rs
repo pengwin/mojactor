@@ -1,3 +1,4 @@
+mod actor_loop;
 mod error;
 mod factory;
 mod handle;

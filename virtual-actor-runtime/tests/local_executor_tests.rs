@@ -3,7 +3,7 @@ use std::{sync::Arc, thread::ThreadId};
 use virtual_actor_runtime::{prelude::*, LocalExecutor, RuntimeContextFactory};
 
 #[derive(Message)]
-#[result(Result<ThreadId, std::io::Error>)]
+#[result(ThreadId)]
 pub struct GetThreadId;
 
 #[derive(Actor)]
@@ -13,7 +13,7 @@ pub struct TestActor;
 pub struct TestActorFactory;
 
 impl ActorFactory<TestActor> for TestActorFactory {
-    fn create_actor(&self) -> TestActor {
+    async fn create_actor(&self) -> TestActor {
         TestActor
     }
 }
@@ -24,8 +24,7 @@ impl MessageHandler<GetThreadId> for TestActor {
         _msg: GetThreadId,
         _ctx: &Self::ActorContext,
     ) -> <GetThreadId as Message>::Result {
-        let current_thread_id = std::thread::current().id();
-        Ok(current_thread_id)
+        std::thread::current().id()
     }
 }
 
@@ -46,8 +45,8 @@ async fn test_local_executor_actor_threads_id() -> Result<(), Box<dyn std::error
 
     let current_thread_id = std::thread::current().id();
 
-    let actor_one_thread_id = actor_one.addr().send(GetThreadId).await??;
-    let actor_two_thread_id = actor_two.addr().send(GetThreadId).await??;
+    let actor_one_thread_id = actor_one.addr().send(GetThreadId).await?;
+    let actor_two_thread_id = actor_two.addr().send(GetThreadId).await?;
 
     assert_ne!(
         current_thread_id, actor_one_thread_id,
@@ -83,8 +82,8 @@ async fn test_local_executors_threads_id() -> Result<(), Box<dyn std::error::Err
 
     let current_thread_id = std::thread::current().id();
 
-    let actor_one_thread_id = actor_one.addr().send(GetThreadId).await??;
-    let actor_two_thread_id = actor_two.addr().send(GetThreadId).await??;
+    let actor_one_thread_id = actor_one.addr().send(GetThreadId).await?;
+    let actor_two_thread_id = actor_two.addr().send(GetThreadId).await?;
 
     assert_ne!(
         current_thread_id, actor_one_thread_id,

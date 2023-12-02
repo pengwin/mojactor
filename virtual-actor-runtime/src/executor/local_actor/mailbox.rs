@@ -2,6 +2,7 @@
 
 use tokio_util::sync::CancellationToken;
 use virtual_actor::Actor;
+use virtual_actor::MailboxPreferences;
 
 use crate::messaging::Mailbox as BaseMailbox;
 use crate::messaging::MessageDispatcher;
@@ -13,8 +14,11 @@ pub struct Mailbox<A: Actor> {
 
 impl<A: Actor> Mailbox<A> {
     /// Creates new mailbox
-    pub fn new(mailbox_cancellation: &CancellationToken) -> (MessageDispatcher<A>, Self) {
-        let (mailbox_sender, inner) = BaseMailbox::new(mailbox_cancellation);
+    pub fn new(
+        preferences: &MailboxPreferences,
+        mailbox_cancellation: &CancellationToken,
+    ) -> (MessageDispatcher<A>, Self) {
+        let (mailbox_sender, inner) = BaseMailbox::new(preferences, mailbox_cancellation);
         let dispatcher = MessageDispatcher::new(mailbox_sender);
         (dispatcher, Self { inner })
     }

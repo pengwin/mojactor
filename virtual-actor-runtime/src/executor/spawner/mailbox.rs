@@ -1,12 +1,10 @@
 //! Mailbox for local spawner
 
 use tokio_util::sync::CancellationToken;
+use virtual_actor::MailboxPreferences;
 
-use super::super::local_actor::LocalActor;
-use crate::messaging::{Mailbox as BaseMailbox, MailboxDispatcher};
-
-/// Dispatcher for `LocalSpawner`
-pub type SpawnerDispatcher = MailboxDispatcher<Box<dyn LocalActor>>;
+use super::{super::local_actor::LocalActor, SpawnerDispatcher};
+use crate::messaging::Mailbox as BaseMailbox;
 
 /// Mailbox for `LocalSpawner`
 pub struct Mailbox {
@@ -15,8 +13,12 @@ pub struct Mailbox {
 
 impl Mailbox {
     /// Creates new mailbox
-    pub fn new(mailbox_cancellation: &CancellationToken) -> (SpawnerDispatcher, Self) {
-        let (dispatcher, inner) = BaseMailbox::new(mailbox_cancellation);
+    pub fn new(
+        preferences: &MailboxPreferences,
+        mailbox_cancellation: &CancellationToken,
+    ) -> (SpawnerDispatcher, Self) {
+        let (sender, inner) = BaseMailbox::new(preferences, mailbox_cancellation);
+        let dispatcher = SpawnerDispatcher::new(sender);
         (dispatcher, Self { inner })
     }
 
@@ -33,13 +35,15 @@ mod tests {
         time::{sleep, Duration},
     };
     use tokio_util::sync::CancellationToken;
+    use virtual_actor::MailboxPreferences;
 
     use crate::executor::actor_registry::ActorRegistry;
 
     #[tokio::test]
     async fn test_mailbox() {
         let mailbox_ct = CancellationToken::new();
-        let (dispatcher, mut mailbox) = super::Mailbox::new(&mailbox_ct);
+        let (dispatcher, mut mailbox) =
+            super::Mailbox::new(&MailboxPreferences { size: 10 }, &mailbox_ct);
 
         dispatcher
             .send(Box::new(TestSpawner))

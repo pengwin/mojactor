@@ -2,17 +2,18 @@
 
 use tokio::{
     select,
-    sync::mpsc::{UnboundedReceiver, UnboundedSender},
+    sync::mpsc::{Receiver, Sender},
 };
 use tokio_util::sync::CancellationToken;
+use virtual_actor::MailboxPreferences;
 
 /// Dispatcher for mailbox
-pub type MailboxDispatcher<T> = UnboundedSender<T>;
+pub type MailboxDispatcher<T> = Sender<T>;
 
 /// Base mailbox implementation
 pub struct Mailbox<T> {
     /// Mailbox channel
-    receiver: UnboundedReceiver<T>,
+    receiver: Receiver<T>,
     /// Message receiving cancellation token
     receiver_cancellation: CancellationToken,
     /// is closed
@@ -21,8 +22,11 @@ pub struct Mailbox<T> {
 
 impl<T> Mailbox<T> {
     /// Creates new mailbox
-    pub fn new(mailbox_cancellation: &CancellationToken) -> (MailboxDispatcher<T>, Self) {
-        let (dispatcher, mailbox) = tokio::sync::mpsc::unbounded_channel::<T>();
+    pub fn new(
+        preferences: &MailboxPreferences,
+        mailbox_cancellation: &CancellationToken,
+    ) -> (MailboxDispatcher<T>, Self) {
+        let (dispatcher, mailbox) = tokio::sync::mpsc::channel::<T>(preferences.size);
         (
             dispatcher,
             Self {
@@ -80,15 +84,17 @@ mod tests {
         time::{sleep, Duration},
     };
     use tokio_util::sync::CancellationToken;
+    use virtual_actor::MailboxPreferences;
 
     #[tokio::test]
     async fn test_mailbox() {
         let mailbox_ct = CancellationToken::new();
-        let (dispatcher, mut mailbox) = super::Mailbox::new(&mailbox_ct);
+        let (dispatcher, mut mailbox) =
+            super::Mailbox::new(&MailboxPreferences { size: 10 }, &mailbox_ct);
 
-        dispatcher.send(123).expect("Send message to mailbox");
-        dispatcher.send(123).expect("Send message to mailbox");
-        dispatcher.send(123).expect("Send message to mailbox");
+        dispatcher.try_send(123).expect("Send message to mailbox");
+        dispatcher.try_send(123).expect("Send message to mailbox");
+        dispatcher.try_send(123).expect("Send message to mailbox");
 
         mailbox_ct.cancel();
 

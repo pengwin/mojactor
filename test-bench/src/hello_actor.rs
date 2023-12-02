@@ -35,3 +35,12 @@ impl MessageHandler<HelloMessage> for HelloActor {
         Ok(result.to_string())
     }
 }
+
+#[derive(Default)]
+pub struct HelloActorFactory {}
+
+impl ActorFactory<HelloActor> for HelloActorFactory {
+    async fn create_actor(&self) -> HelloActor {
+        HelloActor::new()
+    }
+}

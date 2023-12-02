@@ -71,7 +71,7 @@ impl MessageHandler<GetCounter> for PingPongActor {
 pub struct PingPongActorFactory;
 
 impl ActorFactory<PingPongActor> for PingPongActorFactory {
-    fn create_actor(&self) -> PingPongActor {
+    async fn create_actor(&self) -> PingPongActor {
         PingPongActor { counter: 0 }
     }
 }

@@ -24,9 +24,3 @@ pub trait Actor: Sized {
         ctx: &Self::ActorContext,
     ) -> impl Future<Output = Result<(), ResponderError>>;
 }
-
-/// Factory trait for actors
-pub trait ActorFactory<A: Actor>: Send + Sync + 'static {
-    /// Creates new actor
-    fn create_actor(&self) -> A;
-}

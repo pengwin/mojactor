@@ -39,7 +39,7 @@ impl MessageHandler<ThreadSleepTask> for InfiniteLoopActor {
 pub struct InfiniteLoopActorFactory;
 
 impl ActorFactory<InfiniteLoopActor> for InfiniteLoopActorFactory {
-    fn create_actor(&self) -> InfiniteLoopActor {
+    async fn create_actor(&self) -> InfiniteLoopActor {
         InfiniteLoopActor
     }
 }
