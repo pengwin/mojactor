@@ -17,3 +17,6 @@ lint:
 
 test: lint
 	cargo test --all-features
+
+bench: lint
+	cargo bench

@@ -2,9 +2,11 @@
 //! Depends on `virtual-actor` and `virtual-actor-runtime` crates
 
 mod actor_derive;
+mod local_actor_derive;
 mod message_derive;
 mod virtual_actor_derive;
 mod virtual_message_derive;
+
 use proc_macro::TokenStream;
 
 /// Derive macro for [`Actor`] trait
@@ -33,6 +35,12 @@ pub fn derive_message(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(VirtualActor)]
 pub fn derive_virtual_actor(input: TokenStream) -> TokenStream {
     virtual_actor_derive::virtual_actor_derive(input)
+}
+
+/// Derive macro for [`LocalActor`] trait
+#[proc_macro_derive(LocalActor)]
+pub fn derive_local_actor(input: TokenStream) -> TokenStream {
+    local_actor_derive::local_actor_derive(input)
 }
 
 /// Derive macro for [`VirtualMessage`] trait

@@ -1,20 +1,20 @@
-use super::super::local_actor::LocalActor;
+use super::super::local_actor::LocalSpawnedActor;
 use crate::messaging::{MailboxDispatcher, MailboxError};
 
 /// Dispatcher for `LocalSpawner`
 #[derive(Clone)]
 pub struct SpawnerDispatcher {
-    sender: MailboxDispatcher<Box<dyn LocalActor>>,
+    sender: MailboxDispatcher<Box<dyn LocalSpawnedActor>>,
 }
 
 impl SpawnerDispatcher {
     /// Creates new dispatcher
-    pub fn new(inner: MailboxDispatcher<Box<dyn LocalActor>>) -> Self {
+    pub fn new(inner: MailboxDispatcher<Box<dyn LocalSpawnedActor>>) -> Self {
         Self { sender: inner }
     }
 
     /// Send message to mailbox
-    pub fn send(&self, actor: Box<dyn LocalActor>) -> Result<(), MailboxError> {
+    pub fn send(&self, actor: Box<dyn LocalSpawnedActor>) -> Result<(), MailboxError> {
         self.sender
             .try_send(actor)
             .map_err(MailboxError::from_try_send_error)

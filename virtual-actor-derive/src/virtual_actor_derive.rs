@@ -1,10 +1,10 @@
-//! Derive macroses for virtual actor
+//! Derive macros for virtual actor
 
 use proc_macro::TokenStream;
 use quote::{quote, quote_spanned};
 use syn::{parse_macro_input, DeriveInput, Fields};
 
-/// Implentation of derive macro for [`VirtualActor`]
+/// Implementation of derive macro for [`VirtualActor`]
 pub fn virtual_actor_derive(input: TokenStream) -> TokenStream {
     // Parse the input tokens into a syntax tree
     let ast = parse_macro_input!(input as DeriveInput);

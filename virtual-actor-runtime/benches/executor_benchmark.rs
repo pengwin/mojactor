@@ -43,8 +43,11 @@ pub fn messaging_benchmark(c: &mut Criterion) -> Result<(), Box<dyn std::error::
 
     let benchmark_runtime = create_runtime()?;
 
-    let actor = benchmark_runtime
-        .block_on(async { executor.spawn_actor(&actor_factory, &context_factory).await })?;
+    let actor = benchmark_runtime.block_on(async {
+        executor
+            .spawn_local_actor(&actor_factory, &context_factory)
+            .await
+    })?;
 
     let addr = actor.addr();
 
@@ -80,19 +83,19 @@ pub fn inter_thread_messaging_benchmark(
 
     let actor_1_1 = benchmark_runtime.block_on(async {
         executor_1
-            .spawn_actor(&actor_factory, &context_factory)
+            .spawn_local_actor(&actor_factory, &context_factory)
             .await
     })?;
 
     let actor_1_2 = benchmark_runtime.block_on(async {
         executor_1
-            .spawn_actor(&actor_factory, &context_factory)
+            .spawn_local_actor(&actor_factory, &context_factory)
             .await
     })?;
 
     let actor_2_2 = benchmark_runtime.block_on(async {
         executor_2
-            .spawn_actor(&actor_factory, &context_factory)
+            .spawn_local_actor(&actor_factory, &context_factory)
             .await
     })?;
 
@@ -159,7 +162,7 @@ mod bench_actor {
     #[result(())]
     pub struct DispatchMessage;
 
-    #[derive(Actor)]
+    #[derive(Actor, LocalActor)]
     #[message(EchoMessage)]
     #[message(DispatchMessage)]
     #[message(AksMessage)]
@@ -202,7 +205,9 @@ mod bench_actor {
     #[derive(Default)]
     pub struct BenchActorFactory {}
 
-    impl ActorFactory<BenchActor> for BenchActorFactory {
+    impl ActorFactory<BenchActor> for BenchActorFactory {}
+
+    impl LocalActorFactory<BenchActor> for BenchActorFactory {
         async fn create_actor(&self) -> BenchActor {
             BenchActor
         }

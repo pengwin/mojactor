@@ -11,6 +11,10 @@ use tokio_util::sync::CancellationToken;
 use virtual_actor::Actor;
 use virtual_actor::ActorContext;
 use virtual_actor::ActorFactory;
+use virtual_actor::LocalActor;
+use virtual_actor::LocalActorFactory;
+use virtual_actor::VirtualActor;
+use virtual_actor::VirtualActorFactory;
 
 use crate::address::ActorHandle;
 use crate::address::Addr;
@@ -24,6 +28,7 @@ use super::actor_registry::ActorRegistry;
 use super::error::LocalExecutorError;
 use super::executor_preferences::TokioRuntimePreferences;
 use super::local_actor;
+use super::local_actor::LocalSpawnedActor;
 use super::local_set_wrapper::LocalSetWrapper;
 use super::spawner::LocalSpawner;
 use super::spawner::SpawnerDispatcher;
@@ -154,33 +159,53 @@ impl LocalExecutor {
         })
     }
 
-    /// Spawns actor on thread, without waiting for dispatcher to be set
+    /// Spawns local actor on thread
     ///
     /// # Errors
     ///
     /// Returns error if executor thread is not started
     /// Returns error if spawner was not send
-    pub fn spawn_actor_no_wait<A, AF, CF>(
+    pub async fn spawn_local_actor<A, AF, CF>(
         &mut self,
         actor_factory: &Arc<AF>,
         context_factory: &Arc<CF>,
     ) -> Result<Arc<ActorHandle<A>>, LocalExecutorError>
     where
-        A: Actor + 'static,
+        A: LocalActor + 'static,
         A::ActorContext: ActorContext<A, Addr = Addr<A>>,
-        AF: ActorFactory<A> + 'static,
+        AF: LocalActorFactory<A> + 'static,
         CF: ActorContextFactory<A> + 'static,
     {
-        let execution_ct = self.executor_cancellation.child_token();
-        let mailbox_ct = self.mailbox_cancellation.child_token();
-        let (local_actor, handle) =
-            local_actor::create(actor_factory, context_factory, execution_ct, mailbox_ct);
+        self.spawn_actor(
+            actor_factory,
+            context_factory,
+            local_actor::create_local_actor,
+        )
+        .await
+    }
 
-        self.spawner_dispatcher
-            .send(local_actor)
-            .map_err(|e| LocalExecutorError::SpawnerSendError(format!("{e:?}")))?;
-
-        Ok(handle)
+    /// Spawns virtual local actor on thread
+    ///
+    /// # Errors
+    ///
+    /// Returns error if executor thread is not started
+    /// Returns error if spawner was not send
+    pub async fn spawn_virtual_actor<A, AF, CF>(
+        &mut self,
+        actor_id: A::ActorId,
+        actor_factory: &Arc<AF>,
+        context_factory: &Arc<CF>,
+    ) -> Result<Arc<ActorHandle<A>>, LocalExecutorError>
+    where
+        A: VirtualActor + 'static,
+        A::ActorContext: ActorContext<A, Addr = Addr<A>>,
+        AF: VirtualActorFactory<A> + 'static,
+        CF: ActorContextFactory<A> + 'static,
+    {
+        self.spawn_actor(actor_factory, context_factory, |af, cf, ct, m_ct| {
+            local_actor::create_virtual_actor(actor_id, af, cf, ct, m_ct)
+        })
+        .await
     }
 
     /// Spawns actor on thread, without waiting for dispatcher to be set
@@ -189,18 +214,55 @@ impl LocalExecutor {
     ///
     /// Returns error if executor thread is not started
     /// Returns error if spawner was not send
-    pub async fn spawn_actor<A, AF, CF>(
+    fn spawn_actor_no_wait<A, AF, CF, F>(
         &mut self,
         actor_factory: &Arc<AF>,
         context_factory: &Arc<CF>,
+        spawner: F,
     ) -> Result<Arc<ActorHandle<A>>, LocalExecutorError>
     where
         A: Actor + 'static,
         A::ActorContext: ActorContext<A, Addr = Addr<A>>,
         AF: ActorFactory<A> + 'static,
         CF: ActorContextFactory<A> + 'static,
+        F: FnOnce(
+            &Arc<AF>,
+            &Arc<CF>,
+            CancellationToken,
+            CancellationToken,
+        ) -> (Box<dyn LocalSpawnedActor>, Arc<ActorHandle<A>>),
     {
-        let handle = self.spawn_actor_no_wait(actor_factory, context_factory)?;
+        let execution_ct = self.executor_cancellation.child_token();
+        let mailbox_ct = self.mailbox_cancellation.child_token();
+        let (local_actor, handle) =
+            spawner(actor_factory, context_factory, execution_ct, mailbox_ct);
+
+        self.spawner_dispatcher
+            .send(local_actor)
+            .map_err(|e| LocalExecutorError::SpawnerSendError(format!("{e:?}")))?;
+
+        Ok(handle)
+    }
+
+    async fn spawn_actor<A, AF, CF, F>(
+        &mut self,
+        actor_factory: &Arc<AF>,
+        context_factory: &Arc<CF>,
+        spawner: F,
+    ) -> Result<Arc<ActorHandle<A>>, LocalExecutorError>
+    where
+        A: Actor + 'static,
+        A::ActorContext: ActorContext<A, Addr = Addr<A>>,
+        AF: ActorFactory<A> + 'static,
+        CF: ActorContextFactory<A> + 'static,
+        F: FnOnce(
+            &Arc<AF>,
+            &Arc<CF>,
+            CancellationToken,
+            CancellationToken,
+        ) -> (Box<dyn LocalSpawnedActor>, Arc<ActorHandle<A>>),
+    {
+        let handle = self.spawn_actor_no_wait(actor_factory, context_factory, spawner)?;
         handle
             .wait_for_dispatcher(std::time::Duration::from_millis(100))
             .await?;

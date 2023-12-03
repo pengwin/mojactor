@@ -11,15 +11,18 @@ use tokio::sync::Notify;
 use virtual_actor::{Actor, ActorContext, ActorFactory};
 
 use super::handle::{generate_actor_id, ActorId, ActorTaskJoinHandle, LocalActorHandle};
-use super::{error::ActorTaskError, local_actor_trait::LocalActor, mailbox::Mailbox};
+use super::{
+    error::ActorTaskError, local_spawned_actor_trait::LocalSpawnedActor, mailbox::Mailbox,
+};
 
 /// Local actor implementation
-pub struct LocalActorImpl<A, AF, CF>
+pub struct LocalSpawnedActorImpl<A, AF, CF, AL>
 where
-    A: Actor + ActorLoop<A, AF, CF> + 'static,
+    A: Actor + 'static,
     A::ActorContext: ActorContext<A, Addr = Addr<A>>,
     AF: ActorFactory<A> + 'static,
     CF: ActorContextFactory<A> + 'static,
+    AL: ActorLoop<A, AF, CF> + 'static,
 {
     /// Phantom data
     _a: PhantomData<fn(A) -> A>,
@@ -29,20 +32,24 @@ where
     context_factory: Arc<CF>,
     /// Actor handle
     handle: Arc<ActorHandle<A>>,
+    /// Actor loop
+    actor_loop: AL,
 }
 
-impl<A, AF, CF> LocalActorImpl<A, AF, CF>
+impl<A, AF, CF, AL> LocalSpawnedActorImpl<A, AF, CF, AL>
 where
-    A: Actor + ActorLoop<A, AF, CF> + 'static,
+    A: Actor + 'static,
     A::ActorContext: ActorContext<A, Addr = Addr<A>>,
     AF: ActorFactory<A> + 'static,
     CF: ActorContextFactory<A> + 'static,
+    AL: ActorLoop<A, AF, CF> + 'static,
 {
     /// Creates new local actor
     pub fn new(
         actor_factory: &Arc<AF>,
         context_factory: &Arc<CF>,
         handle: &Arc<ActorHandle<A>>,
+        actor_loop: AL,
     ) -> Self
     where
         A: Actor + 'static,
@@ -55,6 +62,7 @@ where
             actor_factory: actor_factory.clone(),
             context_factory: context_factory.clone(),
             handle: handle.clone(),
+            actor_loop,
         }
     }
 
@@ -92,8 +100,9 @@ where
         let handle = self.handle.clone();
         let actor_registry = actor_registry.clone();
         let stop_notify = handle.stop_notify().clone();
+        let actor_loop = self.actor_loop.clone();
         tokio::task::spawn_local(
-            AssertUnwindSafe(A::actor_loop(
+            AssertUnwindSafe(actor_loop.actor_loop(
                 mailbox,
                 self.actor_factory.clone(),
                 self.context_factory.clone(),
@@ -106,12 +115,13 @@ where
     }
 }
 
-impl<A, AF, CF> LocalActor for LocalActorImpl<A, AF, CF>
+impl<A, AF, CF, AL> LocalSpawnedActor for LocalSpawnedActorImpl<A, AF, CF, AL>
 where
     A: Actor + 'static,
     A::ActorContext: ActorContext<A, Addr = Addr<A>>,
     AF: ActorFactory<A> + 'static,
     CF: ActorContextFactory<A> + 'static,
+    AL: ActorLoop<A, AF, CF> + 'static,
 {
     fn spawn(&self, actor_registry: &ActorRegistry) {
         let mailbox_preferences = self.actor_factory.mailbox_preferences();

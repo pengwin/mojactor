@@ -10,7 +10,7 @@ pub struct PendingTask;
 #[result(())]
 pub struct ThreadSleepTask;
 
-#[derive(Actor)]
+#[derive(Actor, LocalActor)]
 #[message(PendingTask)]
 #[message(ThreadSleepTask)]
 pub struct InfiniteLoopActor;
@@ -38,7 +38,9 @@ impl MessageHandler<ThreadSleepTask> for InfiniteLoopActor {
 #[allow(clippy::module_name_repetitions)]
 pub struct InfiniteLoopActorFactory;
 
-impl ActorFactory<InfiniteLoopActor> for InfiniteLoopActorFactory {
+impl ActorFactory<InfiniteLoopActor> for InfiniteLoopActorFactory {}
+
+impl LocalActorFactory<InfiniteLoopActor> for InfiniteLoopActorFactory {
     async fn create_actor(&self) -> InfiniteLoopActor {
         InfiniteLoopActor
     }

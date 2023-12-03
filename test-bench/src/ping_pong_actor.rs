@@ -29,7 +29,7 @@ impl Pong {
 #[result(u32)]
 pub struct GetCounter;
 
-#[derive(Actor)]
+#[derive(Actor, LocalActor)]
 #[message(Ping)]
 #[message(Pong)]
 #[message(GetCounter)]
@@ -70,7 +70,9 @@ impl MessageHandler<GetCounter> for PingPongActor {
 #[allow(clippy::module_name_repetitions)]
 pub struct PingPongActorFactory;
 
-impl ActorFactory<PingPongActor> for PingPongActorFactory {
+impl ActorFactory<PingPongActor> for PingPongActorFactory {}
+
+impl LocalActorFactory<PingPongActor> for PingPongActorFactory {
     async fn create_actor(&self) -> PingPongActor {
         PingPongActor { counter: 0 }
     }

@@ -3,12 +3,12 @@
 use tokio_util::sync::CancellationToken;
 use virtual_actor::MailboxPreferences;
 
-use super::{super::local_actor::LocalActor, SpawnerDispatcher};
+use super::{super::local_actor::LocalSpawnedActor, SpawnerDispatcher};
 use crate::messaging::Mailbox as BaseMailbox;
 
 /// Mailbox for `LocalSpawner`
 pub struct Mailbox {
-    inner: BaseMailbox<Box<dyn LocalActor>>,
+    inner: BaseMailbox<Box<dyn LocalSpawnedActor>>,
 }
 
 impl Mailbox {
@@ -23,7 +23,7 @@ impl Mailbox {
     }
 
     /// Receive message from mailbox
-    pub async fn recv(&mut self, ct: &CancellationToken) -> Option<Box<dyn LocalActor>> {
+    pub async fn recv(&mut self, ct: &CancellationToken) -> Option<Box<dyn LocalSpawnedActor>> {
         self.inner.recv(ct).await
     }
 }
@@ -87,7 +87,7 @@ mod tests {
 
     struct TestSpawner;
 
-    impl super::LocalActor for TestSpawner {
+    impl super::LocalSpawnedActor for TestSpawner {
         fn spawn(&self, _: &ActorRegistry) {
             todo!()
         }

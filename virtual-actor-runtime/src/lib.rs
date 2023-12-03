@@ -18,6 +18,7 @@ pub mod prelude {
 
     // Export derive macros
     pub use virtual_actor_derive::Actor;
+    pub use virtual_actor_derive::LocalActor;
     pub use virtual_actor_derive::Message;
     pub use virtual_actor_derive::VirtualActor;
     pub use virtual_actor_derive::VirtualMessage;

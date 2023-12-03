@@ -12,7 +12,7 @@ impl HelloMessage {
     }
 }
 
-#[derive(Actor)]
+#[derive(Actor, LocalActor)]
 #[message(HelloMessage)]
 pub struct HelloActor {
     counter: u32,
@@ -39,7 +39,9 @@ impl MessageHandler<HelloMessage> for HelloActor {
 #[derive(Default)]
 pub struct HelloActorFactory {}
 
-impl ActorFactory<HelloActor> for HelloActorFactory {
+impl ActorFactory<HelloActor> for HelloActorFactory {}
+
+impl LocalActorFactory<HelloActor> for HelloActorFactory {
     async fn create_actor(&self) -> HelloActor {
         HelloActor::new()
     }

@@ -6,13 +6,15 @@ use virtual_actor_runtime::{prelude::*, LocalExecutor, RuntimeContextFactory};
 #[result(ThreadId)]
 pub struct GetThreadId;
 
-#[derive(Actor)]
+#[derive(Actor, LocalActor)]
 #[message(GetThreadId)]
 pub struct TestActor;
 
 pub struct TestActorFactory;
 
-impl ActorFactory<TestActor> for TestActorFactory {
+impl ActorFactory<TestActor> for TestActorFactory {}
+
+impl LocalActorFactory<TestActor> for TestActorFactory {
     async fn create_actor(&self) -> TestActor {
         TestActor
     }
@@ -36,11 +38,11 @@ async fn test_local_executor_actor_threads_id() -> Result<(), Box<dyn std::error
     let context_factory = Arc::new(RuntimeContextFactory::default());
 
     let actor_one = executor
-        .spawn_actor(&actor_factory, &context_factory)
+        .spawn_local_actor(&actor_factory, &context_factory)
         .await?;
 
     let actor_two = executor
-        .spawn_actor(&actor_factory, &context_factory)
+        .spawn_local_actor(&actor_factory, &context_factory)
         .await?;
 
     let current_thread_id = std::thread::current().id();
@@ -73,11 +75,11 @@ async fn test_local_executors_threads_id() -> Result<(), Box<dyn std::error::Err
     let context_factory = Arc::new(RuntimeContextFactory::default());
 
     let actor_one = executor_one
-        .spawn_actor(&actor_factory, &context_factory)
+        .spawn_local_actor(&actor_factory, &context_factory)
         .await?;
 
     let actor_two = executor_two
-        .spawn_actor(&actor_factory, &context_factory)
+        .spawn_local_actor(&actor_factory, &context_factory)
         .await?;
 
     let current_thread_id = std::thread::current().id();

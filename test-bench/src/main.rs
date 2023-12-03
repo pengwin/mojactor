@@ -10,13 +10,12 @@ use std::{
     time::{Duration, Instant},
 };
 
-use hello_actor::HelloMessage;
 use virtual_actor_runtime::prelude::*;
 use virtual_actor_runtime::{GracefulShutdown, WaitError};
 use virtual_actor_runtime::{LocalExecutor, RuntimeContextFactory};
 
 use crate::{
-    hello_actor::HelloActorFactory,
+    hello_actor::{HelloActorFactory, HelloMessage},
     infinite_loop_actor::{InfiniteLoopActorFactory, PendingTask, ThreadSleepTask},
     ping_pong_actor::{Ping, PingPongActorFactory},
 };
@@ -45,7 +44,7 @@ async fn bench_spawn_wait_shutdown() -> Result<(), Box<dyn std::error::Error>> {
     let start = Instant::now();
     for _ in 0..num_iteration {
         let actor = executor
-            .spawn_actor(&actor_factory, &context_factory)
+            .spawn_local_actor(&actor_factory, &context_factory)
             .await?;
         let addr = actor.addr();
         let _res = addr.send(HelloMessage::new("world")).await??;
@@ -74,7 +73,7 @@ async fn bench_send_wait() -> Result<(), Box<dyn std::error::Error>> {
     let mut executor = LocalExecutor::new()?;
 
     let actor = executor
-        .spawn_actor(&actor_factory, &context_factory)
+        .spawn_local_actor(&actor_factory, &context_factory)
         .await?;
 
     let addr = actor.addr();
@@ -108,11 +107,11 @@ async fn bench_same_thread_ping_pong() -> Result<(), Box<dyn std::error::Error>>
     let mut executor = LocalExecutor::new()?;
 
     let ping = executor
-        .spawn_actor(&actor_factory, &context_factory)
+        .spawn_local_actor(&actor_factory, &context_factory)
         .await?;
 
     let pong = executor
-        .spawn_actor(&actor_factory, &context_factory)
+        .spawn_local_actor(&actor_factory, &context_factory)
         .await?;
 
     let ping_addr = ping.addr();
@@ -151,11 +150,11 @@ async fn bench_2_executors_ping_pong() -> Result<(), Box<dyn std::error::Error>>
     let mut executor_pong = LocalExecutor::new()?;
 
     let ping = executor_ping
-        .spawn_actor(&actor_factory, &context_factory)
+        .spawn_local_actor(&actor_factory, &context_factory)
         .await?;
 
     let pong = executor_pong
-        .spawn_actor(&actor_factory, &context_factory)
+        .spawn_local_actor(&actor_factory, &context_factory)
         .await?;
 
     let ping_addr = ping.addr();
@@ -194,7 +193,7 @@ async fn bench_infinite_loop_pending() -> Result<(), Box<dyn std::error::Error>>
     let mut executor = LocalExecutor::new()?;
 
     let actor = executor
-        .spawn_actor(&actor_factory, &context_factory)
+        .spawn_local_actor(&actor_factory, &context_factory)
         .await?;
 
     let addr = actor.addr();
@@ -220,7 +219,7 @@ async fn bench_infinite_loop_thread_sleep() -> Result<(), Box<dyn std::error::Er
     let mut executor = LocalExecutor::new()?;
 
     let actor = executor
-        .spawn_actor(&actor_factory, &context_factory)
+        .spawn_local_actor(&actor_factory, &context_factory)
         .await?;
 
     let addr = actor.addr();

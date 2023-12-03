@@ -14,6 +14,10 @@ mod message_handler_trait;
 mod message_trait;
 mod responder_trait;
 
+mod local_actor_factory_trait;
+mod local_actor_trait;
+
+mod virtual_actor_factory_trait;
 mod virtual_actor_trait;
 mod virtual_message_trait;
 
@@ -26,6 +30,8 @@ pub use actor_context_trait::ActorContext;
 pub use actor_factory_trait::ActorFactory;
 pub use actor_trait::Actor;
 pub use cancellation_token_trait::CancellationToken;
+pub use local_actor_factory_trait::LocalActorFactory;
+pub use local_actor_trait::LocalActor;
 pub use mailbox_preferences::MailboxPreferences;
 pub use message_envelope_trait::{MessageEnvelope, MessageEnvelopeFactory};
 pub use message_handler_trait::MessageHandler;
@@ -34,5 +40,6 @@ pub use responder_trait::Responder;
 pub use responder_trait::ResponderError;
 
 // Export virtual actor traits
+pub use virtual_actor_factory_trait::VirtualActorFactory;
 pub use virtual_actor_trait::VirtualActor;
 pub use virtual_message_trait::VirtualMessage;
