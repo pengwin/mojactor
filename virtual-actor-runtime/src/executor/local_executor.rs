@@ -254,7 +254,7 @@ impl LocalExecutor {
     }
 
     fn build_runtime(preferences: &TokioRuntimePreferences) -> Result<Runtime, LocalExecutorError> {
-        let mut builder = Builder::new_multi_thread();
+        let mut builder = Builder::new_current_thread();
         if preferences.enable_io {
             builder.enable_io();
         }
