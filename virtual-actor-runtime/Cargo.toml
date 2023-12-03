@@ -18,3 +18,8 @@ virtual-actor-derive = { path = "../virtual-actor-derive" }
 
 [dev-dependencies]
 tokio = { version = "1.34",  features = ["rt", "sync", "parking_lot", "macros", "time"], default-features = false }
+criterion = { version = "0.5.1", features = ["async_tokio"]  }
+
+[[bench]]
+name = "executor_benchmark"
+harness = false
