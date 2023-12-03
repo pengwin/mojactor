@@ -4,6 +4,7 @@ use std::sync::Arc;
 use std::thread::JoinHandle;
 
 use tokio::runtime::Builder;
+use tokio::runtime::Runtime;
 use tokio::sync::Notify;
 
 use tokio_util::sync::CancellationToken;
@@ -21,6 +22,7 @@ use crate::utils::GracefulShutdownHandle;
 
 use super::actor_registry::ActorRegistry;
 use super::error::LocalExecutorError;
+use super::executor_preferences::TokioRuntimePreferences;
 use super::local_actor;
 use super::local_set_wrapper::LocalSetWrapper;
 use super::spawner::LocalSpawner;
@@ -133,6 +135,7 @@ impl LocalExecutor {
             local_set_cancellation.clone(),
         );
         let thread_handle = Self::start_thread(
+            &preferences,
             spawner,
             local_set_stopped.clone(),
             thread_stopped_notify.clone(),
@@ -230,12 +233,13 @@ impl LocalExecutor {
     }
 
     fn start_thread(
+        executor_preferences: &ExecutorPreferences,
         spawner: LocalSpawner,
         local_set_stopped: Arc<Notify>,
         thread_stopped: Arc<Notify>,
         local_set_cancellation: CancellationToken,
     ) -> Result<JoinHandle<()>, LocalExecutorError> {
-        let rt = Builder::new_current_thread().enable_all().build()?;
+        let rt = Self::build_runtime(&executor_preferences.tokio_runtime_preferences)?;
 
         let handle = std::thread::spawn(move || {
             let local = LocalSetWrapper::new();
@@ -247,5 +251,20 @@ impl LocalExecutor {
         });
 
         Ok(handle)
+    }
+
+    fn build_runtime(preferences: &TokioRuntimePreferences) -> Result<Runtime, LocalExecutorError> {
+        let mut builder = Builder::new_multi_thread();
+        if preferences.enable_io {
+            builder.enable_io();
+        }
+        if preferences.enable_time {
+            builder.enable_time();
+        }
+        if let Some(stack_size) = preferences.thread_stack_size {
+            builder.thread_stack_size(stack_size);
+        }
+        let rt = builder.build()?;
+        Ok(rt)
     }
 }

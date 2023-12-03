@@ -5,23 +5,38 @@
 
 use std::sync::Arc;
 
-use bench_actor::{BenchActorFactory, DispatchMessage, EchoMessage, AksMessage};
+use bench_actor::{AksMessage, BenchActorFactory, DispatchMessage, EchoMessage};
 use criterion::{criterion_group, criterion_main, Criterion};
-use tokio::runtime::{Runtime, self};
+use tokio::runtime::{self, Runtime};
 use virtual_actor::ActorAddr;
-use virtual_actor_runtime::{LocalExecutor, RuntimeContextFactory};
+use virtual_actor_runtime::{
+    ExecutorPreferences, LocalExecutor, RuntimeContextFactory, TokioRuntimePreferences,
+};
 
 fn create_runtime() -> Result<Runtime, Box<dyn std::error::Error>> {
     let rt = runtime::Builder::new_multi_thread()
-    .worker_threads(100)
-    .enable_time()
-    .build()?;
+        .worker_threads(100)
+        .enable_time()
+        .build()?;
 
     Ok(rt)
 }
 
+fn create_executor() -> Result<LocalExecutor, Box<dyn std::error::Error>> {
+    let executor = LocalExecutor::with_preferences(ExecutorPreferences {
+        tokio_runtime_preferences: TokioRuntimePreferences {
+            enable_io: false,
+            enable_time: false,
+            thread_stack_size: None,
+        },
+        ..Default::default()
+    })?;
+
+    Ok(executor)
+}
+
 pub fn messaging_benchmark(c: &mut Criterion) -> Result<(), Box<dyn std::error::Error>> {
-    let mut executor = LocalExecutor::new()?;
+    let mut executor = create_executor()?;
 
     let actor_factory = Arc::new(BenchActorFactory {});
     let context_factory = Arc::new(RuntimeContextFactory::default());
@@ -55,8 +70,8 @@ pub fn messaging_benchmark(c: &mut Criterion) -> Result<(), Box<dyn std::error::
 pub fn inter_thread_messaging_benchmark(
     c: &mut Criterion,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut executor_1 = LocalExecutor::new()?;
-    let mut executor_2 = LocalExecutor::new()?;
+    let mut executor_1 = create_executor()?;
+    let mut executor_2 = create_executor()?;
 
     let actor_factory = Arc::new(BenchActorFactory {});
     let context_factory = Arc::new(RuntimeContextFactory::default());

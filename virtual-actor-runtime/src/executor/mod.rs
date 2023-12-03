@@ -9,4 +9,5 @@ mod local_set_wrapper;
 mod spawner;
 
 pub use executor_preferences::ExecutorPreferences;
+pub use executor_preferences::TokioRuntimePreferences;
 pub use local_executor::LocalExecutor;

@@ -8,7 +8,7 @@ mod utils;
 
 pub use address::{Addr, WeakRef};
 pub use context::{RuntimeContext, RuntimeContextFactory};
-pub use executor::LocalExecutor;
+pub use executor::{ExecutorPreferences, LocalExecutor, TokioRuntimePreferences};
 pub use utils::waiter::WaitError;
 pub use utils::GracefulShutdown;
 
