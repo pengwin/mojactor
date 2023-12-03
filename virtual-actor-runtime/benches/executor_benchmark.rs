@@ -1,23 +1,32 @@
 //! This benchmark tests the performance of the `LocalExecutor` by spawning an actor and sending it a message.
 #![allow(unused_must_use)]
 #![allow(missing_docs)]
+#![allow(clippy::missing_errors_doc)]
 
 use std::sync::Arc;
 
-use bench_actor::{BenchActorFactory, DispatchMessage, EchoMessage};
+use bench_actor::{BenchActorFactory, DispatchMessage, EchoMessage, AksMessage};
 use criterion::{criterion_group, criterion_main, Criterion};
-use tokio::runtime::Runtime;
+use tokio::runtime::{Runtime, self};
 use virtual_actor::ActorAddr;
 use virtual_actor_runtime::{LocalExecutor, RuntimeContextFactory};
 
-#[allow(clippy::missing_errors_doc)]
-pub fn criterion_benchmark(c: &mut Criterion) -> Result<(), Box<dyn std::error::Error>> {
+fn create_runtime() -> Result<Runtime, Box<dyn std::error::Error>> {
+    let rt = runtime::Builder::new_multi_thread()
+    .worker_threads(100)
+    .enable_time()
+    .build()?;
+
+    Ok(rt)
+}
+
+pub fn messaging_benchmark(c: &mut Criterion) -> Result<(), Box<dyn std::error::Error>> {
     let mut executor = LocalExecutor::new()?;
 
     let actor_factory = Arc::new(BenchActorFactory {});
     let context_factory = Arc::new(RuntimeContextFactory::default());
 
-    let benchmark_runtime = Runtime::new()?;
+    let benchmark_runtime = create_runtime()?;
 
     let actor = benchmark_runtime
         .block_on(async { executor.spawn_actor(&actor_factory, &context_factory).await })?;
@@ -43,12 +52,81 @@ pub fn criterion_benchmark(c: &mut Criterion) -> Result<(), Box<dyn std::error::
     Ok(())
 }
 
-criterion_group!(benches, criterion_benchmark);
+pub fn inter_thread_messaging_benchmark(
+    c: &mut Criterion,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut executor_1 = LocalExecutor::new()?;
+    let mut executor_2 = LocalExecutor::new()?;
+
+    let actor_factory = Arc::new(BenchActorFactory {});
+    let context_factory = Arc::new(RuntimeContextFactory::default());
+
+    let benchmark_runtime = create_runtime()?;
+
+    let actor_1_1 = benchmark_runtime.block_on(async {
+        executor_1
+            .spawn_actor(&actor_factory, &context_factory)
+            .await
+    })?;
+
+    let actor_1_2 = benchmark_runtime.block_on(async {
+        executor_1
+            .spawn_actor(&actor_factory, &context_factory)
+            .await
+    })?;
+
+    let actor_2_2 = benchmark_runtime.block_on(async {
+        executor_2
+            .spawn_actor(&actor_factory, &context_factory)
+            .await
+    })?;
+
+    let addr_1_1 = actor_1_1.addr();
+    let addr_1_2 = actor_1_2.addr();
+
+    let addr_2_2 = actor_2_2.addr();
+
+    c.bench_function("single thread communication", |b| {
+        b.to_async(&benchmark_runtime).iter(|| async {
+            if let Err(e) = addr_1_1.send(AksMessage::new(addr_1_2.weak_ref())).await {
+                println!("Error: {e:?}");
+            }
+        });
+    });
+
+    c.bench_function("inter thread communication", |b| {
+        b.to_async(&benchmark_runtime).iter(|| async {
+            if let Err(e) = addr_1_1.send(AksMessage::new(addr_2_2.weak_ref())).await {
+                println!("Error: {e:?}");
+            }
+        });
+    });
+
+    Ok(())
+}
+
+criterion_group!(
+    benches,
+    messaging_benchmark,
+    inter_thread_messaging_benchmark
+);
 criterion_main!(benches);
 
 /// This module contains the actor and actor factory used for the benchmark.
 mod bench_actor {
-    use virtual_actor_runtime::prelude::*;
+    use virtual_actor_runtime::{prelude::*, WeakRef};
+
+    #[derive(Message)]
+    #[result(())]
+    pub struct AksMessage {
+        recipient: WeakRef<BenchActor>,
+    }
+
+    impl AksMessage {
+        pub fn new(recipient: WeakRef<BenchActor>) -> Self {
+            Self { recipient }
+        }
+    }
 
     #[derive(Message)]
     #[result(&'static str)]
@@ -69,6 +147,7 @@ mod bench_actor {
     #[derive(Actor)]
     #[message(EchoMessage)]
     #[message(DispatchMessage)]
+    #[message(AksMessage)]
     pub struct BenchActor;
 
     impl MessageHandler<EchoMessage> for BenchActor {
@@ -87,6 +166,21 @@ mod bench_actor {
             _msg: DispatchMessage,
             _ctx: &Self::ActorContext,
         ) -> <DispatchMessage as Message>::Result {
+        }
+    }
+
+    impl MessageHandler<AksMessage> for BenchActor {
+        async fn handle(
+            &mut self,
+            msg: AksMessage,
+            _ctx: &Self::ActorContext,
+        ) -> <AksMessage as Message>::Result {
+            let r = msg.recipient.upgrade();
+            if let Some(r) = r {
+                if let Err(e) = r.send(EchoMessage::new("test")).await {
+                    println!("Error: {e:?}");
+                }
+            }
         }
     }
 
