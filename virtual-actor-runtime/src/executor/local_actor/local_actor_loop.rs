@@ -1,65 +1,67 @@
 use std::{marker::PhantomData, sync::Arc};
 
 use tokio::select;
-use virtual_actor::{ActorContext, LocalActor, LocalActorFactory};
+use virtual_actor::{Actor, ActorContext, ActorFactory, LocalActor, LocalActorFactory};
 
 use crate::{address::ActorHandle, context::ActorContextFactory, Addr};
 
 use super::{actor_loop::ActorLoop, error::ActorTaskError, mailbox::Mailbox};
 
-pub struct LocalActorLoop<A, AF, CF>
+pub struct LocalActorLoop<AF, CF>
 where
-    A: LocalActor + 'static,
-    A::ActorContext: ActorContext<A, Addr = Addr<A>>,
-    AF: LocalActorFactory<A> + 'static,
-    CF: ActorContextFactory<A> + 'static,
+    <<AF as ActorFactory>::Actor as Actor>::ActorContext:
+        ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+    AF: LocalActorFactory + 'static,
+    <AF as ActorFactory>::Actor: LocalActor + 'static,
+    CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
 {
-    _a: PhantomData<fn(A) -> A>,
     _af: PhantomData<fn(AF) -> AF>,
     _cf: PhantomData<fn(CF) -> CF>,
 }
 
-impl<A, AF, CF> Default for LocalActorLoop<A, AF, CF>
+impl<AF, CF> Default for LocalActorLoop<AF, CF>
 where
-    A: LocalActor + 'static,
-    A::ActorContext: ActorContext<A, Addr = Addr<A>>,
-    AF: LocalActorFactory<A> + 'static,
-    CF: ActorContextFactory<A> + 'static,
+    <<AF as ActorFactory>::Actor as Actor>::ActorContext:
+        ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+    AF: LocalActorFactory + 'static,
+    <AF as ActorFactory>::Actor: LocalActor + 'static,
+    CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
 {
     fn default() -> Self {
         Self {
-            _a: PhantomData,
             _af: PhantomData,
             _cf: PhantomData,
         }
     }
 }
 
-impl<A, AF, CF> Clone for LocalActorLoop<A, AF, CF>
+impl<AF, CF> Clone for LocalActorLoop<AF, CF>
 where
-    A: LocalActor + 'static,
-    A::ActorContext: ActorContext<A, Addr = Addr<A>>,
-    AF: LocalActorFactory<A> + 'static,
-    CF: ActorContextFactory<A> + 'static,
+    <<AF as ActorFactory>::Actor as Actor>::ActorContext:
+        ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+    AF: LocalActorFactory + 'static,
+    <AF as ActorFactory>::Actor: LocalActor + 'static,
+    CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
 {
     fn clone(&self) -> Self {
         Self::default()
     }
 }
 
-impl<A, AF, CF> ActorLoop<A, AF, CF> for LocalActorLoop<A, AF, CF>
+impl<AF, CF> ActorLoop<AF, CF> for LocalActorLoop<AF, CF>
 where
-    A: LocalActor + 'static,
-    A::ActorContext: ActorContext<A, Addr = Addr<A>>,
-    AF: LocalActorFactory<A> + 'static,
-    CF: ActorContextFactory<A> + 'static,
+    <<AF as ActorFactory>::Actor as Actor>::ActorContext:
+        ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+    AF: LocalActorFactory + 'static,
+    <AF as ActorFactory>::Actor: LocalActor + 'static,
+    CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
 {
     async fn actor_loop(
         self,
-        mut mailbox: Mailbox<A>,
+        mut mailbox: Mailbox<<AF as ActorFactory>::Actor>,
         actor_factory: Arc<AF>,
         context_factory: Arc<CF>,
-        handle: Arc<ActorHandle<A>>,
+        handle: Arc<ActorHandle<<AF as ActorFactory>::Actor>>,
     ) -> Result<(), ActorTaskError> {
         let mut actor = actor_factory.create_actor().await;
 

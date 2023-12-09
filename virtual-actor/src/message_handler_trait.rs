@@ -91,6 +91,10 @@ mod tests {
             }
             Ok(())
         }
+
+        fn name() -> crate::names::ActorName {
+            stringify!(TestActor)
+        }
     }
 
     impl MessageHandler<TestMessage> for TestActor {

@@ -70,9 +70,11 @@ impl MessageHandler<GetCounter> for PingPongActor {
 #[allow(clippy::module_name_repetitions)]
 pub struct PingPongActorFactory;
 
-impl ActorFactory<PingPongActor> for PingPongActorFactory {}
+impl ActorFactory for PingPongActorFactory {
+    type Actor = PingPongActor;
+}
 
-impl LocalActorFactory<PingPongActor> for PingPongActorFactory {
+impl LocalActorFactory for PingPongActorFactory {
     async fn create_actor(&self) -> PingPongActor {
         PingPongActor { counter: 0 }
     }

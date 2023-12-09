@@ -43,10 +43,6 @@ pub fn virtual_actor_derive(input: TokenStream) -> TokenStream {
             fn id(&self) -> &Self::ActorId {
                 &self.id
             }
-
-            fn name() -> ::virtual_actor_runtime::prelude::names::MessageName {
-                stringify!(#name)
-            }
         }
     };
 

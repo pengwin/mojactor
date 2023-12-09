@@ -5,7 +5,17 @@ use std::{fmt::Display, sync::Arc};
 use serde::{de::DeserializeOwned, Serialize};
 
 /// Trait for identifier of actor
-pub trait ActorId: Serialize + DeserializeOwned + Clone + Display + Send + Sync + 'static {
+pub trait ActorId:
+    Serialize
+    + DeserializeOwned
+    + Clone
+    + Display
+    + Send
+    + Sync
+    + std::cmp::Eq
+    + std::hash::Hash
+    + 'static
+{
     /* Empty */
 }
 

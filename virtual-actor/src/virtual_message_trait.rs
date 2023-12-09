@@ -1,15 +1,15 @@
 //! Virtual message trait
 
 use super::names::MessageName;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Deserialize, Serialize};
 
 use super::message_trait::Message;
 
 /// A message can be sent to virtual actor
-/// Mesage can be serialized and send through network or processed as is by local actor
-pub trait VirtualMessage: Serialize + DeserializeOwned + Send + 'static + Message
+/// Message can be serialized and send through network or processed as is by local actor
+pub trait VirtualMessage: Serialize + Deserialize<'static> + Send + 'static + Message
 where
-    Self::Result: Serialize + DeserializeOwned + Send + 'static,
+    Self::Result: Serialize + Deserialize<'static> + Send + 'static,
 {
     /// Name of the message
     fn name() -> MessageName;

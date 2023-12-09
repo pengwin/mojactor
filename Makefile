@@ -1,10 +1,16 @@
-.PHONY: build clean lint test run
+.PHONY: build clean lint test run format run-valgrind run-miri
 
 run: lint
 	cargo run -p test-bench
 
 run-release: lint
 	cargo run -p test-bench --release
+
+run-valgrind: lint
+	cargo valgrind run -p test-bench
+
+run-miri: lint
+	cargo miri run -p test-bench
 
 build: lint
 	cargo build
@@ -20,3 +26,6 @@ test: lint
 
 bench: lint
 	cargo bench
+
+format:
+	cargo fmt --all -- --check

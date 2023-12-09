@@ -8,5 +8,6 @@ edition = "2021"
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 futures = { version = "0.3.29" }
+serde = { version = "1.0.192", features = ["derive", "rc"] }
 
 virtual-actor-runtime = { path = "../virtual-actor-runtime" }

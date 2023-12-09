@@ -2,7 +2,8 @@ use std::sync::{Arc, OnceLock};
 
 use tokio_util::sync::CancellationToken;
 use virtual_actor::{
-    ActorContext, LocalActor, LocalActorFactory, VirtualActor, VirtualActorFactory,
+    Actor, ActorContext, ActorFactory, LocalActor, LocalActorFactory, Uuid, VirtualActor,
+    VirtualActorFactory,
 };
 
 use crate::{address::ActorHandle, context::ActorContextFactory, Addr};
@@ -13,17 +14,21 @@ use super::{
 };
 
 /// Creates new local actor
-pub fn create_local_actor<A, AF, CF>(
+pub fn create_local_actor<AF, CF>(
     actor_factory: &Arc<AF>,
     context_factory: &Arc<CF>,
     execution_cancellation: CancellationToken,
     mailbox_cancellation: CancellationToken,
-) -> (Box<dyn LocalSpawnedActor>, Arc<ActorHandle<A>>)
+) -> (
+    Box<dyn LocalSpawnedActor>,
+    Arc<ActorHandle<<AF as ActorFactory>::Actor>>,
+)
 where
-    A: LocalActor + 'static,
-    A::ActorContext: ActorContext<A, Addr = Addr<A>>,
-    AF: LocalActorFactory<A> + 'static,
-    CF: ActorContextFactory<A> + 'static,
+    <<AF as ActorFactory>::Actor as Actor>::ActorContext:
+        ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+    AF: LocalActorFactory + 'static,
+    <AF as ActorFactory>::Actor: LocalActor + 'static,
+    CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
 {
     let dispatcher_ref = Arc::new(OnceLock::new());
     let handle = Arc::new(ActorHandle::new(
@@ -32,6 +37,7 @@ where
         mailbox_cancellation,
     ));
     let spawner = LocalSpawnedActorImpl::new(
+        Uuid::new_v4(),
         actor_factory,
         context_factory,
         &handle,
@@ -42,18 +48,22 @@ where
 }
 
 /// Creates new virtual actor
-pub fn create_virtual_actor<A, AF, CF>(
-    actor_id: A::ActorId,
+pub fn create_virtual_actor<AF, CF>(
+    actor_id: <<AF as ActorFactory>::Actor as VirtualActor>::ActorId,
     actor_factory: &Arc<AF>,
     context_factory: &Arc<CF>,
     execution_cancellation: CancellationToken,
     mailbox_cancellation: CancellationToken,
-) -> (Box<dyn LocalSpawnedActor>, Arc<ActorHandle<A>>)
+) -> (
+    Box<dyn LocalSpawnedActor>,
+    Arc<ActorHandle<<AF as ActorFactory>::Actor>>,
+)
 where
-    A: VirtualActor + 'static,
-    A::ActorContext: ActorContext<A, Addr = Addr<A>>,
-    AF: VirtualActorFactory<A> + 'static,
-    CF: ActorContextFactory<A> + 'static,
+    <<AF as ActorFactory>::Actor as Actor>::ActorContext:
+        ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+    AF: VirtualActorFactory + 'static,
+    <AF as ActorFactory>::Actor: VirtualActor + 'static,
+    CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
 {
     let dispatcher_ref = Arc::new(OnceLock::new());
     let handle = Arc::new(ActorHandle::new(
@@ -62,6 +72,7 @@ where
         mailbox_cancellation,
     ));
     let spawner = LocalSpawnedActorImpl::new(
+        Uuid::new_v4(),
         actor_factory,
         context_factory,
         &handle,

@@ -2,7 +2,7 @@
 
 use std::future::Future;
 
-use crate::{ActorContext, MessageEnvelope, ResponderError};
+use crate::{names::ActorName, ActorContext, MessageEnvelope, ResponderError};
 
 /// Marker trait for actors
 pub trait Actor: Sized {
@@ -16,6 +16,9 @@ pub trait Actor: Sized {
 
     /// Type of actor context
     type ActorContext: ActorContext<Self>;
+
+    /// Name of the actor
+    fn name() -> ActorName;
 
     /// Handles message envelope
     fn handle_envelope(

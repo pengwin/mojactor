@@ -12,9 +12,11 @@ pub struct TestActor;
 
 pub struct TestActorFactory;
 
-impl ActorFactory<TestActor> for TestActorFactory {}
+impl ActorFactory for TestActorFactory {
+    type Actor = TestActor;
+}
 
-impl LocalActorFactory<TestActor> for TestActorFactory {
+impl LocalActorFactory for TestActorFactory {
     async fn create_actor(&self) -> TestActor {
         TestActor
     }
@@ -32,18 +34,14 @@ impl MessageHandler<GetThreadId> for TestActor {
 
 #[tokio::test]
 async fn test_local_executor_actor_threads_id() -> Result<(), Box<dyn std::error::Error>> {
-    let mut executor = LocalExecutor::new()?;
+    let runtime = Runtime::default();
+    let executor = LocalExecutor::new()?;
 
     let actor_factory = Arc::new(TestActorFactory);
-    let context_factory = Arc::new(RuntimeContextFactory::default());
 
-    let actor_one = executor
-        .spawn_local_actor(&actor_factory, &context_factory)
-        .await?;
+    let actor_one = runtime.spawn_local(&actor_factory, &executor).await?;
 
-    let actor_two = executor
-        .spawn_local_actor(&actor_factory, &context_factory)
-        .await?;
+    let actor_two = runtime.spawn_local(&actor_factory, &executor).await?;
 
     let current_thread_id = std::thread::current().id();
 
@@ -68,19 +66,15 @@ async fn test_local_executor_actor_threads_id() -> Result<(), Box<dyn std::error
 
 #[tokio::test]
 async fn test_local_executors_threads_id() -> Result<(), Box<dyn std::error::Error>> {
-    let mut executor_one = LocalExecutor::new()?;
-    let mut executor_two = LocalExecutor::new()?;
+    let runtime = Runtime::default();
+    let executor_one = LocalExecutor::new()?;
+    let executor_two = LocalExecutor::new()?;
 
     let actor_factory = Arc::new(TestActorFactory);
-    let context_factory = Arc::new(RuntimeContextFactory::default());
 
-    let actor_one = executor_one
-        .spawn_local_actor(&actor_factory, &context_factory)
-        .await?;
+    let actor_one = runtime.spawn_local(&actor_factory, &executor_one).await?;
 
-    let actor_two = executor_two
-        .spawn_local_actor(&actor_factory, &context_factory)
-        .await?;
+    let actor_two = runtime.spawn_local(&actor_factory, &executor_two).await?;
 
     let current_thread_id = std::thread::current().id();
 

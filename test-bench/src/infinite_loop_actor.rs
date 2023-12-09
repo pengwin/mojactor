@@ -38,9 +38,11 @@ impl MessageHandler<ThreadSleepTask> for InfiniteLoopActor {
 #[allow(clippy::module_name_repetitions)]
 pub struct InfiniteLoopActorFactory;
 
-impl ActorFactory<InfiniteLoopActor> for InfiniteLoopActorFactory {}
+impl ActorFactory for InfiniteLoopActorFactory {
+    type Actor = InfiniteLoopActor;
+}
 
-impl LocalActorFactory<InfiniteLoopActor> for InfiniteLoopActorFactory {
+impl LocalActorFactory for InfiniteLoopActorFactory {
     async fn create_actor(&self) -> InfiniteLoopActor {
         InfiniteLoopActor
     }

@@ -7,14 +7,13 @@ use std::sync::Arc;
 
 use bench_actor::{AksMessage, BenchActorFactory, DispatchMessage, EchoMessage};
 use criterion::{criterion_group, criterion_main, Criterion};
-use tokio::runtime::{self, Runtime};
 use virtual_actor::ActorAddr;
 use virtual_actor_runtime::{
-    ExecutorPreferences, LocalExecutor, RuntimeContextFactory, TokioRuntimePreferences,
+    prelude::Runtime, ExecutorPreferences, LocalExecutor, TokioRuntimePreferences,
 };
 
-fn create_runtime() -> Result<Runtime, Box<dyn std::error::Error>> {
-    let rt = runtime::Builder::new_multi_thread()
+fn create_runtime() -> Result<tokio::runtime::Runtime, Box<dyn std::error::Error>> {
+    let rt = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(100)
         .enable_time()
         .build()?;
@@ -36,18 +35,15 @@ fn create_executor() -> Result<LocalExecutor, Box<dyn std::error::Error>> {
 }
 
 pub fn messaging_benchmark(c: &mut Criterion) -> Result<(), Box<dyn std::error::Error>> {
-    let mut executor = create_executor()?;
-
-    let actor_factory = Arc::new(BenchActorFactory {});
-    let context_factory = Arc::new(RuntimeContextFactory::default());
-
     let benchmark_runtime = create_runtime()?;
 
-    let actor = benchmark_runtime.block_on(async {
-        executor
-            .spawn_local_actor(&actor_factory, &context_factory)
-            .await
-    })?;
+    let runtime = Runtime::default();
+    let executor = create_executor()?;
+
+    let actor_factory = Arc::new(BenchActorFactory {});
+
+    let actor = benchmark_runtime
+        .block_on(async { runtime.spawn_local(&actor_factory, &executor).await })?;
 
     let addr = actor.addr();
 
@@ -73,31 +69,23 @@ pub fn messaging_benchmark(c: &mut Criterion) -> Result<(), Box<dyn std::error::
 pub fn inter_thread_messaging_benchmark(
     c: &mut Criterion,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let mut executor_1 = create_executor()?;
-    let mut executor_2 = create_executor()?;
-
-    let actor_factory = Arc::new(BenchActorFactory {});
-    let context_factory = Arc::new(RuntimeContextFactory::default());
-
     let benchmark_runtime = create_runtime()?;
 
-    let actor_1_1 = benchmark_runtime.block_on(async {
-        executor_1
-            .spawn_local_actor(&actor_factory, &context_factory)
-            .await
-    })?;
+    let executor_1 = create_executor()?;
+    let executor_2 = create_executor()?;
 
-    let actor_1_2 = benchmark_runtime.block_on(async {
-        executor_1
-            .spawn_local_actor(&actor_factory, &context_factory)
-            .await
-    })?;
+    let runtime = Runtime::default();
 
-    let actor_2_2 = benchmark_runtime.block_on(async {
-        executor_2
-            .spawn_local_actor(&actor_factory, &context_factory)
-            .await
-    })?;
+    let actor_factory = Arc::new(BenchActorFactory {});
+
+    let actor_1_1 = benchmark_runtime
+        .block_on(async { runtime.spawn_local(&actor_factory, &executor_1).await })?;
+
+    let actor_1_2 = benchmark_runtime
+        .block_on(async { runtime.spawn_local(&actor_factory, &executor_1).await })?;
+
+    let actor_2_2 = benchmark_runtime
+        .block_on(async { runtime.spawn_local(&actor_factory, &executor_2).await })?;
 
     let addr_1_1 = actor_1_1.addr();
     let addr_1_2 = actor_1_2.addr();
@@ -205,9 +193,11 @@ mod bench_actor {
     #[derive(Default)]
     pub struct BenchActorFactory {}
 
-    impl ActorFactory<BenchActor> for BenchActorFactory {}
+    impl ActorFactory for BenchActorFactory {
+        type Actor = BenchActor;
+    }
 
-    impl LocalActorFactory<BenchActor> for BenchActorFactory {
+    impl LocalActorFactory for BenchActorFactory {
         async fn create_actor(&self) -> BenchActor {
             BenchActor
         }

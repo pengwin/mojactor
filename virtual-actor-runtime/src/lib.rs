@@ -4,6 +4,7 @@ mod address;
 mod context;
 mod executor;
 mod messaging;
+mod runtime;
 mod utils;
 
 pub use address::{Addr, WeakRef};
@@ -15,6 +16,8 @@ pub use utils::GracefulShutdown;
 pub mod prelude {
     //! Virtual actor prelude
     pub use virtual_actor::*;
+
+    pub use crate::runtime::Runtime;
 
     // Export derive macros
     pub use virtual_actor_derive::Actor;

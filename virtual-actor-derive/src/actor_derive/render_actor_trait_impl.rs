@@ -53,6 +53,10 @@ pub fn render(
 
             type MessagesEnvelope = #internal_mod_name::#messages_envelope_name;
 
+            fn name() -> ::virtual_actor_runtime::prelude::names::MessageName {
+                stringify!(#actor_name)
+            }
+
             #rendered_envelope_handler
         }
     }

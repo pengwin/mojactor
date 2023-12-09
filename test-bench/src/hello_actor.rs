@@ -39,9 +39,11 @@ impl MessageHandler<HelloMessage> for HelloActor {
 #[derive(Default)]
 pub struct HelloActorFactory {}
 
-impl ActorFactory<HelloActor> for HelloActorFactory {}
+impl ActorFactory for HelloActorFactory {
+    type Actor = HelloActor;
+}
 
-impl LocalActorFactory<HelloActor> for HelloActorFactory {
+impl LocalActorFactory for HelloActorFactory {
     async fn create_actor(&self) -> HelloActor {
         HelloActor::new()
     }

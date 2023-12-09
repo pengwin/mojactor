@@ -1,9 +1,14 @@
 //! Runtime context for actor.
 
-use tokio_util::sync::CancellationToken;
-use virtual_actor::{Actor, ActorContext};
+use std::sync::Arc;
 
-use crate::address::Addr;
+use tokio_util::sync::CancellationToken;
+use virtual_actor::{Actor, ActorContext, VirtualActor};
+
+use crate::{
+    address::Addr,
+    runtime::{ActivateActorError, ActorRegistry},
+};
 
 use super::cancellation_token_wrapper::CancellationTokenWrapper;
 
@@ -15,10 +20,13 @@ pub struct RuntimeContext<A: Actor> {
     cancellation_token: CancellationTokenWrapper,
     /// Mailbox cancellation token
     mailbox_cancellation_token: CancellationToken,
+    /// Actor registry
+    registry: Arc<ActorRegistry>,
 }
 
 impl<A: Actor> RuntimeContext<A> {
     pub(crate) fn new(
+        registry: Arc<ActorRegistry>,
         self_addr: Addr<A>,
         mailbox_cancellation_token: &CancellationToken,
         cancellation_token: &CancellationToken,
@@ -27,7 +35,20 @@ impl<A: Actor> RuntimeContext<A> {
             self_addr,
             mailbox_cancellation_token: mailbox_cancellation_token.clone(),
             cancellation_token: CancellationTokenWrapper::new(cancellation_token.clone()),
+            registry,
         }
+    }
+
+    /// Gets or creates virtual actor
+    ///
+    /// # Errors
+    ///
+    /// Returns error if actor cannot be activated
+    pub async fn get_or_create<VA: VirtualActor>(
+        &self,
+        id: VA::ActorId,
+    ) -> Result<Addr<VA>, ActivateActorError> {
+        self.registry.get_or_create(id).await
     }
 }
 
@@ -40,6 +61,7 @@ where
             self_addr: self.self_addr.create_clone(),
             mailbox_cancellation_token: self.mailbox_cancellation_token.clone(),
             cancellation_token: self.cancellation_token.clone(),
+            registry: self.registry.clone(),
         }
     }
 }

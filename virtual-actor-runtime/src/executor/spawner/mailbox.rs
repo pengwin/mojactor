@@ -30,6 +30,8 @@ impl Mailbox {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use tokio::{
         select,
         time::{sleep, Duration},
@@ -37,7 +39,9 @@ mod tests {
     use tokio_util::sync::CancellationToken;
     use virtual_actor::MailboxPreferences;
 
-    use crate::executor::actor_registry::ActorRegistry;
+    use crate::executor::actor_tasks_registry::{
+        ActorTaskJoinHandle, ActorTasksRegistry, SpawnedActorId,
+    };
 
     #[tokio::test]
     async fn test_mailbox() {
@@ -88,7 +92,11 @@ mod tests {
     struct TestSpawner;
 
     impl super::LocalSpawnedActor for TestSpawner {
-        fn spawn(&self, _: &ActorRegistry) {
+        fn spawn(&self, registry: Arc<ActorTasksRegistry>) -> ActorTaskJoinHandle {
+            todo!()
+        }
+
+        fn id(&self) -> SpawnedActorId {
             todo!()
         }
     }
