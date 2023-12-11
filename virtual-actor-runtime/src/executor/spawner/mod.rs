@@ -1,5 +1,3 @@
-//! `LocalSpawner`
-
 mod local_spawner;
 mod mailbox;
 mod spawner_dispatcher;

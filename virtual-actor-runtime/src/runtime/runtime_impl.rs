@@ -9,22 +9,39 @@ use crate::{
     RuntimeContextFactory,
 };
 
-use super::registry::{ActivateActorError, ActorRegistry};
+use super::{
+    registry::{ActivateActorError, ActorRegistry},
+    runtime_preferences::RuntimePreferences,
+};
 
 /// Virtual actor runtime
 pub struct Runtime {
+    preferences: Arc<RuntimePreferences>,
     registry: Arc<ActorRegistry>,
 }
 
-impl Default for Runtime {
-    fn default() -> Self {
-        Self {
-            registry: Arc::new(ActorRegistry::new()),
-        }
-    }
-}
-
 impl Runtime {
+    /// Creates new runtime
+    ///
+    /// # Errors
+    ///
+    /// Returns error if was not able to create actor registry
+    pub fn new() -> Result<Self, LocalExecutorError> {
+        Self::with_preferences(RuntimePreferences::default())
+    }
+
+    /// Creates new runtime with preferences
+    ///
+    /// # Errors
+    ///
+    /// Returns error if was not able to create actor registry
+    pub fn with_preferences(preferences: RuntimePreferences) -> Result<Self, LocalExecutorError> {
+        Ok(Self {
+            preferences: Arc::new(preferences),
+            registry: Arc::new(ActorRegistry::new()?),
+        })
+    }
+
     /// Spawns local actor on executor
     ///
     /// # Errors
@@ -52,7 +69,15 @@ impl Runtime {
     }
 
     /// Registers virtual actor
-    pub fn register_actor<AF>(&self, factory: AF, executor: &LocalExecutor)
+    ///
+    /// # Errors
+    ///
+    /// Returns error if was not able to register actor
+    pub fn register_actor<AF>(
+        &self,
+        factory: AF,
+        executor: &LocalExecutor,
+    ) -> Result<(), LocalExecutorError>
     where
         <AF as ActorFactory>::Actor:
             Actor<ActorContext = RuntimeContext<<AF as ActorFactory>::Actor>>,
@@ -63,7 +88,7 @@ impl Runtime {
             self.registry.clone(),
         ));
         self.registry
-            .register_actor(factory, context_factory, executor);
+            .register_actor(factory, context_factory, executor, self.preferences.clone())
     }
 
     /// Spawns virtual actor on executor

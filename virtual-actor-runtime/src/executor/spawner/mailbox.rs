@@ -1,5 +1,3 @@
-//! Mailbox for local spawner
-
 use tokio_util::sync::CancellationToken;
 use virtual_actor::MailboxPreferences;
 
@@ -92,7 +90,7 @@ mod tests {
     struct TestSpawner;
 
     impl super::LocalSpawnedActor for TestSpawner {
-        fn spawn(&self, registry: Arc<ActorTasksRegistry>) -> ActorTaskJoinHandle {
+        fn spawn(&self, _registry: Arc<ActorTasksRegistry>) -> ActorTaskJoinHandle {
             todo!()
         }
 

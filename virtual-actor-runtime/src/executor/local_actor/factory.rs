@@ -6,7 +6,7 @@ use virtual_actor::{
     VirtualActorFactory,
 };
 
-use crate::{address::ActorHandle, context::ActorContextFactory, Addr};
+use crate::{address::ActorHandle, context::ActorContextFactory, Addr, utils::atomic_timestamp::AtomicTimestamp};
 
 use super::{
     local_actor_loop::LocalActorLoop, local_spawned_actor_impl::LocalSpawnedActorImpl,
@@ -31,10 +31,12 @@ where
     CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
 {
     let dispatcher_ref = Arc::new(OnceLock::new());
+    let last_received_msg_timestamp = AtomicTimestamp::new();
     let handle = Arc::new(ActorHandle::new(
         dispatcher_ref,
         execution_cancellation,
         mailbox_cancellation,
+        last_received_msg_timestamp.clone(),
     ));
     let spawner = LocalSpawnedActorImpl::new(
         Uuid::new_v4(),
@@ -42,6 +44,7 @@ where
         context_factory,
         &handle,
         LocalActorLoop::default(),
+        last_received_msg_timestamp,
     );
 
     (Box::new(spawner), handle)
@@ -66,17 +69,23 @@ where
     CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
 {
     let dispatcher_ref = Arc::new(OnceLock::new());
+    let last_received_msg_timestamp = AtomicTimestamp::new();
     let handle = Arc::new(ActorHandle::new(
         dispatcher_ref,
         execution_cancellation,
         mailbox_cancellation,
+        last_received_msg_timestamp.clone(),
     ));
     let spawner = LocalSpawnedActorImpl::new(
         Uuid::new_v4(),
         actor_factory,
         context_factory,
         &handle,
-        VirtualActorLoop::new(actor_id),
+        VirtualActorLoop::new(
+            actor_id,
+            handle.last_processed_msg_timestamp(),
+        ),
+        last_received_msg_timestamp,
     );
 
     (Box::new(spawner), handle)

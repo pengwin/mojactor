@@ -12,6 +12,8 @@ use std::{
     time::{Duration, Instant},
 };
 
+use futures::StreamExt;
+use tokio_util::codec::{FramedRead, LinesCodec};
 use virtual_actor_runtime::prelude::*;
 use virtual_actor_runtime::LocalExecutor;
 use virtual_actor_runtime::{GracefulShutdown, WaitError};
@@ -29,6 +31,7 @@ use crate::{
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    //test_qwe().await?;
     bench_send_wait().await?;
     bench_spawn_wait_shutdown().await?;
     bench_same_thread_ping_pong().await?;
@@ -48,7 +51,7 @@ async fn bench_spawn_wait_shutdown() -> Result<(), Box<dyn std::error::Error>> {
 
     let executor = LocalExecutor::new()?;
 
-    let runtime = Runtime::default();
+    let runtime = Runtime::new()?;
 
     let num_iteration = 10_000;
     let start = Instant::now();
@@ -79,7 +82,7 @@ async fn bench_send_wait() -> Result<(), Box<dyn std::error::Error>> {
 
     let executor = LocalExecutor::new()?;
 
-    let runtime = Runtime::default();
+    let runtime = Runtime::new()?;
 
     let actor = runtime.spawn_local(&actor_factory, &executor).await?;
 
@@ -111,7 +114,7 @@ async fn bench_same_thread_ping_pong() -> Result<(), Box<dyn std::error::Error>>
     let actor_factory = Arc::new(PingPongActorFactory {});
 
     let executor = LocalExecutor::new()?;
-    let runtime = Runtime::default();
+    let runtime = Runtime::new()?;
 
     let ping = runtime.spawn_local(&actor_factory, &executor).await?;
 
@@ -151,7 +154,7 @@ async fn bench_2_executors_ping_pong() -> Result<(), Box<dyn std::error::Error>>
     let executor_ping = LocalExecutor::new()?;
     let executor_pong = LocalExecutor::new()?;
 
-    let runtime = Runtime::default();
+    let runtime = Runtime::new()?;
 
     let ping = runtime.spawn_local(&actor_factory, &executor_ping).await?;
 
@@ -190,7 +193,7 @@ async fn bench_infinite_loop_pending() -> Result<(), Box<dyn std::error::Error>>
     let actor_factory = Arc::new(InfiniteLoopActorFactory {});
 
     let executor = LocalExecutor::new()?;
-    let runtime = Runtime::default();
+    let runtime = Runtime::new()?;
 
     let actor = runtime.spawn_local(&actor_factory, &executor).await?;
 
@@ -213,8 +216,8 @@ async fn bench_virtual_actor_spawn_send_wait() -> Result<(), Box<dyn std::error:
 
     let executor = LocalExecutor::new()?;
 
-    let runtime = Runtime::default();
-    runtime.register_actor(HelloVirtualActorFactory, &executor);
+    let runtime = Runtime::new()?;
+    runtime.register_actor(HelloVirtualActorFactory, &executor)?;
 
     let num_iteration: u32 = 10_000;
     let start = Instant::now();
@@ -229,6 +232,8 @@ async fn bench_virtual_actor_spawn_send_wait() -> Result<(), Box<dyn std::error:
         elapsed = elapsed / num_iteration
     );
 
+    tokio::time::sleep(Duration::from_secs(10)).await;
+
     executor
         .graceful_shutdown(Duration::from_millis(100))
         .await?;
@@ -242,9 +247,9 @@ async fn bench_virtual_ping_pong() -> Result<(), Box<dyn std::error::Error>> {
 
     let executor = LocalExecutor::new()?;
 
-    let runtime = Runtime::default();
-    runtime.register_actor(VirtualPingActorFactory, &executor);
-    runtime.register_actor(VirtualPongActorFactory, &executor);
+    let runtime = Runtime::new()?;
+    runtime.register_actor(VirtualPingActorFactory, &executor)?;
+    runtime.register_actor(VirtualPongActorFactory, &executor)?;
 
     let num_iteration: u32 = 10_000;
     let id = 42;
@@ -286,7 +291,7 @@ async fn bench_infinite_loop_thread_sleep() -> Result<(), Box<dyn std::error::Er
     let actor_factory = Arc::new(InfiniteLoopActorFactory);
 
     let executor = LocalExecutor::new()?;
-    let runtime = Runtime::default();
+    let runtime = Runtime::new()?;
 
     let actor = runtime.spawn_local(&actor_factory, &executor).await?;
 
@@ -306,6 +311,49 @@ async fn bench_infinite_loop_thread_sleep() -> Result<(), Box<dyn std::error::Er
         }
         r => r,
     }?;
+
+    Ok(())
+}
+
+#[allow(dead_code)]
+async fn test_qwe() -> Result<(), Box<dyn std::error::Error>> {
+    println!("test_qwe");
+
+    let stdin = tokio::io::stdin();
+    let mut reader = FramedRead::new(stdin, LinesCodec::new());
+
+    let executor = LocalExecutor::new()?;
+
+    let runtime = Runtime::new()?;
+    runtime.register_actor(HelloVirtualActorFactory, &executor)?;
+
+    let num_iteration: u32 = 10_000;
+    let start = Instant::now();
+    let id = 42;
+    let addr = runtime.spawn_virtual::<HelloVirtualActor>(id).await?;
+
+    let mut line = reader.next().await.transpose()?;
+    while let Some(l) = line {
+        if l == "quit" {
+            break;
+        }
+        let res = addr.send(HelloVirtualMessage::new(&l)).await??;
+        println!("res: {res}");
+        line = reader.next().await.transpose()?;
+    }
+
+    let elapsed = start.elapsed();
+    println!("Elapsed: {elapsed:.2?}");
+    println!(
+        "Per iteration: {elapsed:.2?}",
+        elapsed = elapsed / num_iteration
+    );
+
+    tokio::time::sleep(Duration::from_secs(10)).await;
+
+    executor
+        .graceful_shutdown(Duration::from_millis(100))
+        .await?;
 
     Ok(())
 }

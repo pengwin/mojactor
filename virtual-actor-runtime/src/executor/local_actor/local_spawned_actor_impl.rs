@@ -7,9 +7,10 @@ use crate::context::ActorContextFactory;
 use crate::executor::actor_tasks_registry::{
     ActorTaskJoinHandle, ActorTasksRegistry, SpawnedActorId,
 };
+use crate::utils::atomic_timestamp::AtomicTimestamp;
+use crate::utils::notify_once::NotifyOnce;
 use crate::{address::ActorHandle, address::Addr};
 use futures::FutureExt;
-use tokio::sync::Notify;
 use virtual_actor::{Actor, ActorContext, ActorFactory};
 
 use super::{
@@ -34,6 +35,8 @@ where
     handle: Arc<ActorHandle<<AF as ActorFactory>::Actor>>,
     /// Actor loop
     actor_loop: AL,
+    /// Last received message timestamp
+    last_received_msg_timestamp: AtomicTimestamp,
 }
 
 impl<AF, CF, AL> LocalSpawnedActorImpl<AF, CF, AL>
@@ -51,6 +54,7 @@ where
         context_factory: &Arc<CF>,
         handle: &Arc<ActorHandle<<AF as ActorFactory>::Actor>>,
         actor_loop: AL,
+        last_received_msg_timestamp: AtomicTimestamp,
     ) -> Self
     where
         <<AF as ActorFactory>::Actor as Actor>::ActorContext:
@@ -65,6 +69,7 @@ where
             context_factory: context_factory.clone(),
             handle: handle.clone(),
             actor_loop,
+            last_received_msg_timestamp,
         }
     }
 
@@ -84,12 +89,12 @@ where
         result: &Result<(), ActorTaskError>,
         id: &SpawnedActorId,
         registry: &ActorTasksRegistry,
-        notify: &Notify,
+        notify: &NotifyOnce,
     ) {
         if let Err(e) = result {
             eprintln!("Actor task error: {e:?}");
         }
-        notify.notify_one();
+        notify.notify();
         registry.unregister_actor(id);
     }
 
@@ -129,6 +134,7 @@ where
         let (dispatcher, mailbox) = Mailbox::<<AF as ActorFactory>::Actor>::new(
             mailbox_preferences,
             self.handle.mailbox_cancellation(),
+            &self.last_received_msg_timestamp,
         );
 
         self.handle

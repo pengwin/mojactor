@@ -8,8 +8,11 @@ use virtual_actor::{Actor, AddrError, Message, MessageEnvelopeFactory, MessageHa
 
 use crate::{
     messaging::MessageDispatcher,
-    utils::waiter::{waiter, WaitError},
-    utils::GracefulShutdown,
+    utils::{atomic_timestamp::AtomicTimestamp, GracefulShutdown},
+    utils::{
+        notify_once::NotifyOnce,
+        waiter::{waiter, WaitError},
+    },
     Addr,
 };
 
@@ -20,11 +23,15 @@ pub struct ActorHandle<A: Actor> {
     /// Dispatcher ready notify
     dispatcher_ready: Arc<Notify>,
     /// Actor stopped
-    actor_stopped: Arc<Notify>,
+    actor_stopped: Arc<NotifyOnce>,
     /// Actor execution cancellation token
     execution_cancellation: CancellationToken,
     /// Message receiving cancellation token
     mailbox_cancellation: CancellationToken,
+    /// Timestamp of last processed message
+    last_received_msg_timestamp: AtomicTimestamp,
+    /// Timestamp of last processed message
+    last_processed_msg_timestamp: AtomicTimestamp,
 }
 
 impl<A: Actor> GracefulShutdown for ActorHandle<A> {
@@ -33,7 +40,7 @@ impl<A: Actor> GracefulShutdown for ActorHandle<A> {
         self.mailbox_cancellation.cancel();
         let res = waiter(
             "actor_messaging_stopped",
-            &self.actor_stopped,
+            self.actor_stopped.inner(),
             timeout,
             None,
         )
@@ -48,7 +55,7 @@ impl<A: Actor> GracefulShutdown for ActorHandle<A> {
 
         waiter(
             "actor_execution_stopped",
-            &self.actor_stopped,
+            self.actor_stopped.inner(),
             timeout,
             None,
         )
@@ -62,13 +69,16 @@ impl<A: Actor> ActorHandle<A> {
         dispatcher: Arc<OnceLock<MessageDispatcher<A>>>,
         execution_cancellation: CancellationToken,
         mailbox_cancellation: CancellationToken,
+        last_received_msg_timestamp: AtomicTimestamp,
     ) -> Self {
         Self {
             dispatcher,
-            actor_stopped: Arc::new(Notify::new()),
+            actor_stopped: Arc::new(NotifyOnce::new()),
             dispatcher_ready: Arc::new(Notify::new()),
             execution_cancellation,
             mailbox_cancellation,
+            last_received_msg_timestamp,
+            last_processed_msg_timestamp: AtomicTimestamp::new(),
         }
     }
 
@@ -83,6 +93,14 @@ impl<A: Actor> ActorHandle<A> {
         }
     }
 
+    pub fn last_processed_msg_timestamp(&self) -> &AtomicTimestamp {
+        &self.last_processed_msg_timestamp
+    }
+
+    pub fn last_received_msg_timestamp(&self) -> &AtomicTimestamp {
+        &self.last_received_msg_timestamp
+    }
+
     /// Clone cancellation token
     pub fn cancellation_token(&self) -> &CancellationToken {
         &self.execution_cancellation
@@ -93,9 +111,14 @@ impl<A: Actor> ActorHandle<A> {
         &self.mailbox_cancellation
     }
 
-    /// Clone cancellation token
-    pub fn stop_notify(&self) -> &Arc<Notify> {
+    /// Clone notify
+    pub fn stop_notify(&self) -> &Arc<NotifyOnce> {
         &self.actor_stopped
+    }
+
+    /// Is finished
+    pub fn is_finished(&self) -> bool {
+        self.actor_stopped.is_notified()
     }
 
     /// Wait for dispatcher to be set

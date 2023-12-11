@@ -4,12 +4,12 @@ use virtual_actor_runtime::prelude::*;
 #[derive(Message, VirtualMessage, Serialize, Deserialize)]
 #[result(Result<String, String>)]
 pub struct HelloVirtualMessage {
-    msg: &'static str,
+    msg: String,
 }
 
 impl HelloVirtualMessage {
-    pub fn new(msg: &'static str) -> Self {
-        Self { msg }
+    pub fn new(msg: &str) -> Self {
+        Self { msg: msg.to_string() }
     }
 }
 

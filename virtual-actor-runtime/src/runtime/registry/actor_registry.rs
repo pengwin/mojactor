@@ -5,9 +5,13 @@ use virtual_actor::{
     names::ActorName, Actor, ActorContext, ActorFactory, VirtualActor, VirtualActorFactory,
 };
 
-use crate::{context::ActorContextFactory, executor::LocalExecutorError, Addr, LocalExecutor};
+use crate::{
+    context::ActorContextFactory, executor::LocalExecutorError,
+    runtime::runtime_preferences::RuntimePreferences, Addr, ExecutorPreferences, LocalExecutor,
+    TokioRuntimePreferences,
+};
 
-use super::virtual_actor_registration::ActorActivator;
+use super::actor_activator::{ActorActivator, ActorSpawnError};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ActivateActorError {
@@ -15,25 +19,28 @@ pub enum ActivateActorError {
     ActorNotFound(ActorName),
     #[error("Unexpected activator registered for actor {0:?}")]
     UnexpectedActivator(ActorName),
-    #[error("Local executor error: {0:?}")]
-    ExecutorError(#[from] LocalExecutorError),
+    #[error("ActorSpawnError: {0:?}")]
+    SpawnError(#[from] ActorSpawnError),
 }
 
 pub struct ActorRegistry {
     activators: DashMap<ActorName, Box<dyn std::any::Any + Send + Sync>>,
-}
-
-impl Default for ActorRegistry {
-    fn default() -> Self {
-        Self::new()
-    }
+    housekeeping_executor: LocalExecutor,
 }
 
 impl ActorRegistry {
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> Result<Self, LocalExecutorError> {
+        Ok(Self {
             activators: DashMap::new(),
-        }
+            housekeeping_executor: LocalExecutor::with_preferences(ExecutorPreferences {
+                tokio_runtime_preferences: TokioRuntimePreferences {
+                    enable_io: false,
+                    enable_time: true,
+                    ..Default::default()
+                },
+                ..Default::default()
+            })?,
+        })
     }
 
     pub fn register_actor<AF, CF>(
@@ -41,7 +48,9 @@ impl ActorRegistry {
         factory: AF,
         context_factory: Arc<CF>,
         executor: &LocalExecutor,
-    ) where
+        preferences: Arc<RuntimePreferences>,
+    ) -> Result<(), LocalExecutorError>
+    where
         <<AF as ActorFactory>::Actor as Actor>::ActorContext:
             ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
         AF: VirtualActorFactory + 'static,
@@ -49,8 +58,15 @@ impl ActorRegistry {
         CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
     {
         let name = <AF as ActorFactory>::Actor::name();
-        let activator = ActorActivator::new(factory, context_factory, executor);
+        let activator = ActorActivator::new(
+            factory,
+            context_factory,
+            executor,
+            self.housekeeping_executor.handle(),
+            preferences,
+        )?;
         self.activators.insert(name, Box::new(activator));
+        Ok(())
     }
 
     /// Gets or creates virtual actor

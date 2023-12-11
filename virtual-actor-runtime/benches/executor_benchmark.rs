@@ -37,7 +37,7 @@ fn create_executor() -> Result<LocalExecutor, Box<dyn std::error::Error>> {
 pub fn messaging_benchmark(c: &mut Criterion) -> Result<(), Box<dyn std::error::Error>> {
     let benchmark_runtime = create_runtime()?;
 
-    let runtime = Runtime::default();
+    let runtime = Runtime::new()?;
     let executor = create_executor()?;
 
     let actor_factory = Arc::new(BenchActorFactory {});
@@ -74,7 +74,7 @@ pub fn inter_thread_messaging_benchmark(
     let executor_1 = create_executor()?;
     let executor_2 = create_executor()?;
 
-    let runtime = Runtime::default();
+    let runtime = Runtime::new()?;
 
     let actor_factory = Arc::new(BenchActorFactory {});
 

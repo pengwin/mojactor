@@ -5,6 +5,8 @@ use std::sync::Arc;
 use tokio::sync::mpsc::error::TrySendError;
 use virtual_actor::{Actor, Message, MessageEnvelopeFactory, MessageHandler};
 
+use crate::utils::atomic_timestamp::AtomicTimestamp;
+
 use super::{mailbox::MailboxDispatcher, one_shot_responder::OneshotResponder, MailboxError};
 
 /// Message dispatcher error
@@ -25,17 +27,25 @@ impl DispatcherError {
 }
 
 /// Message dispatcher for `Actor`
-#[derive(Clone)]
 pub struct MessageDispatcher<A: Actor> {
     /// Sender for mailbox
     mailbox_sender: Arc<MailboxDispatcher<A::MessagesEnvelope>>,
+    /// Timestamp of last processed message
+    last_received_msg_timestamp: AtomicTimestamp,
+}
+
+impl<A: Actor> Clone for MessageDispatcher<A> {
+    fn clone(&self) -> Self {
+        Self { mailbox_sender: self.mailbox_sender.clone(), last_received_msg_timestamp: self.last_received_msg_timestamp.clone() }
+    }
 }
 
 impl<A: Actor> MessageDispatcher<A> {
     /// Creates new message dispatcher
-    pub fn new(mailbox_sender: MailboxDispatcher<A::MessagesEnvelope>) -> Self {
+    pub fn new(mailbox_sender: MailboxDispatcher<A::MessagesEnvelope>, last_received_msg_timestamp: AtomicTimestamp,) -> Self {
         Self {
             mailbox_sender: Arc::new(mailbox_sender),
+            last_received_msg_timestamp,
         }
     }
 }
@@ -54,6 +64,8 @@ impl<A: Actor> MessageDispatcher<A> {
             .try_send(envelope)
             .map_err(DispatcherError::from_try_send_error)?;
 
+        self.last_received_msg_timestamp.set_now();
+
         let a = receiver.await?;
 
         Ok(a)
@@ -70,6 +82,8 @@ impl<A: Actor> MessageDispatcher<A> {
         self.mailbox_sender
             .try_send(envelope)
             .map_err(DispatcherError::from_try_send_error)?;
+
+        self.last_received_msg_timestamp.set_now();
 
         Ok(())
     }

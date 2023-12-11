@@ -50,6 +50,31 @@ impl Handle {
         .await
     }
 
+    /// Spawns local actor on thread
+    ///
+    /// # Errors
+    ///
+    /// Returns error if executor thread is not started
+    /// Returns error if spawner was not send
+    pub(crate) fn spawn_local_actor_no_wait<AF, CF>(
+        &self,
+        actor_factory: &Arc<AF>,
+        context_factory: &Arc<CF>,
+    ) -> Result<Arc<ActorHandle<<AF as ActorFactory>::Actor>>, LocalExecutorError>
+    where
+        <<AF as ActorFactory>::Actor as Actor>::ActorContext:
+            ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+        AF: LocalActorFactory + 'static,
+        <AF as ActorFactory>::Actor: LocalActor + 'static,
+        CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
+    {
+        self.spawn_actor_no_wait(
+            actor_factory,
+            context_factory,
+            local_actor::create_local_actor,
+        )
+    }
+
     /// Spawns virtual local actor on thread without waiting for dispatcher to be set
     ///
     /// # Errors
