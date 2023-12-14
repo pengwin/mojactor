@@ -12,7 +12,7 @@ pub enum AddrError {
     ActorNotReady,
     /// Dispatcher not set
     #[error("Actor stopped")]
-    Cancelled,
+    Stopped,
     /// Dispatcher error
     #[error("Dispatch error {0}")]
     DispatcherError(Box<dyn std::error::Error + Send + Sync>),

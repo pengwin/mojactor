@@ -2,7 +2,7 @@ use std::{marker::PhantomData, sync::Arc};
 
 use virtual_actor::{Actor, ActorContext};
 
-use crate::{address::ActorHandle, runtime::ActorRegistry, Addr};
+use crate::{address::ActorHandle, runtime::ActorRegistry, LocalAddr};
 
 use super::{context_factory_trait::ActorContextFactory, runtime_context::RuntimeContext};
 
@@ -28,10 +28,10 @@ impl<A: Actor> RuntimeContextFactory<A> {
 impl<A> ActorContextFactory<A> for RuntimeContextFactory<A>
 where
     A: Actor<ActorContext = RuntimeContext<A>> + 'static,
-    A::ActorContext: ActorContext<A, Addr = Addr<A>>,
+    A::ActorContext: ActorContext<A, Addr = LocalAddr<A>>,
 {
-    fn create_context(&self, handle: &Arc<ActorHandle<A>>) -> A::ActorContext {
-        let addr = Addr::new(handle);
+    fn create_context(&self, handle: &ActorHandle<A>) -> A::ActorContext {
+        let addr = LocalAddr::new(handle);
         RuntimeContext::new(
             self.registry.clone(),
             addr,

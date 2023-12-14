@@ -21,7 +21,8 @@ impl<A: Actor> Mailbox<A> {
         last_received_msg_timestamp: &AtomicTimestamp,
     ) -> (MessageDispatcher<A>, Self) {
         let (mailbox_sender, inner) = BaseMailbox::new(preferences, mailbox_cancellation);
-        let dispatcher = MessageDispatcher::new(mailbox_sender, last_received_msg_timestamp.clone());
+        let dispatcher =
+            MessageDispatcher::new(mailbox_sender, last_received_msg_timestamp.clone());
         (dispatcher, Self { inner })
     }
 

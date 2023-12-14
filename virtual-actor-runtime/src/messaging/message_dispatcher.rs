@@ -36,13 +36,19 @@ pub struct MessageDispatcher<A: Actor> {
 
 impl<A: Actor> Clone for MessageDispatcher<A> {
     fn clone(&self) -> Self {
-        Self { mailbox_sender: self.mailbox_sender.clone(), last_received_msg_timestamp: self.last_received_msg_timestamp.clone() }
+        Self {
+            mailbox_sender: self.mailbox_sender.clone(),
+            last_received_msg_timestamp: self.last_received_msg_timestamp.clone(),
+        }
     }
 }
 
 impl<A: Actor> MessageDispatcher<A> {
     /// Creates new message dispatcher
-    pub fn new(mailbox_sender: MailboxDispatcher<A::MessagesEnvelope>, last_received_msg_timestamp: AtomicTimestamp,) -> Self {
+    pub fn new(
+        mailbox_sender: MailboxDispatcher<A::MessagesEnvelope>,
+        last_received_msg_timestamp: AtomicTimestamp,
+    ) -> Self {
         Self {
             mailbox_sender: Arc::new(mailbox_sender),
             last_received_msg_timestamp,

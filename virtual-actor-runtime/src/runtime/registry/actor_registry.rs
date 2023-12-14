@@ -6,9 +6,10 @@ use virtual_actor::{
 };
 
 use crate::{
-    context::ActorContextFactory, executor::LocalExecutorError,
-    runtime::runtime_preferences::RuntimePreferences, Addr, ExecutorPreferences, LocalExecutor,
-    TokioRuntimePreferences,
+    context::ActorContextFactory,
+    executor::{LocalExecutor, LocalExecutorError},
+    runtime::runtime_preferences::RuntimePreferences,
+    ExecutorHandle, ExecutorPreferences, LocalAddr, TokioRuntimePreferences,
 };
 
 use super::actor_activator::{ActorActivator, ActorSpawnError};
@@ -32,7 +33,7 @@ impl ActorRegistry {
     pub fn new() -> Result<Self, LocalExecutorError> {
         Ok(Self {
             activators: DashMap::new(),
-            housekeeping_executor: LocalExecutor::with_preferences(ExecutorPreferences {
+            housekeeping_executor: LocalExecutor::new(&ExecutorPreferences {
                 tokio_runtime_preferences: TokioRuntimePreferences {
                     enable_io: false,
                     enable_time: true,
@@ -47,12 +48,14 @@ impl ActorRegistry {
         &self,
         factory: AF,
         context_factory: Arc<CF>,
-        executor: &LocalExecutor,
+        executor: &ExecutorHandle,
         preferences: Arc<RuntimePreferences>,
     ) -> Result<(), LocalExecutorError>
     where
-        <<AF as ActorFactory>::Actor as Actor>::ActorContext:
-            ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+        <<AF as ActorFactory>::Actor as Actor>::ActorContext: ActorContext<
+            <AF as ActorFactory>::Actor,
+            Addr = LocalAddr<<AF as ActorFactory>::Actor>,
+        >,
         AF: VirtualActorFactory + 'static,
         <AF as ActorFactory>::Actor: VirtualActor + 'static,
         CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
@@ -73,7 +76,7 @@ impl ActorRegistry {
     pub async fn get_or_create<A: VirtualActor>(
         &self,
         id: A::ActorId,
-    ) -> Result<Addr<A>, ActivateActorError> {
+    ) -> Result<LocalAddr<A>, ActivateActorError> {
         let name = A::name();
         let activator = self
             .activators

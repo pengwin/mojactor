@@ -1,36 +1,35 @@
 //! `ActorAddr` implementation
 
-use std::sync::{Arc, Weak};
-
 use virtual_actor::{
     Actor, ActorAddr, AddrError, Message, MessageEnvelopeFactory, MessageHandler, WeakActorRef,
 };
 
-use super::actor_handle::ActorHandle;
+use super::actor_handle::{ActorHandle, WeakActorHandle};
 
 /// Actor address
-pub struct Addr<A: Actor> {
+pub struct LocalAddr<A: Actor> {
     /// Actor handler
-    handle: Arc<ActorHandle<A>>,
+    handle: ActorHandle<A>,
 }
 
-impl<A: Actor> Addr<A> {
+impl<A: Actor> LocalAddr<A> {
     /// Creates new actor address
-    pub(crate) fn new(handle: &Arc<ActorHandle<A>>) -> Self {
+    pub(crate) fn new(handle: &ActorHandle<A>) -> Self {
         Self {
             handle: handle.clone(),
         }
     }
+}
 
-    /// Creates private clone
-    pub(crate) fn create_clone(&self) -> Self {
+impl<A: Actor> Clone for LocalAddr<A> {
+    fn clone(&self) -> Self {
         Self {
             handle: self.handle.clone(),
         }
     }
 }
 
-impl<A: Actor> ActorAddr<A> for Addr<A> {
+impl<A: Actor> ActorAddr<A> for LocalAddr<A> {
     type WeakRef = WeakRef<A>;
 
     async fn send<M>(&self, msg: M) -> Result<M::Result, AddrError>
@@ -53,7 +52,7 @@ impl<A: Actor> ActorAddr<A> for Addr<A> {
 
     fn weak_ref(&self) -> Self::WeakRef {
         WeakRef {
-            handle: Arc::downgrade(&self.handle),
+            weak_handle: self.handle.weak_ref(),
         }
     }
 }
@@ -61,25 +60,25 @@ impl<A: Actor> ActorAddr<A> for Addr<A> {
 /// Weak actor address
 pub struct WeakRef<A: Actor> {
     /// Actor weak handler
-    handle: Weak<ActorHandle<A>>,
+    weak_handle: WeakActorHandle<A>,
 }
 
 impl<A: Actor> Clone for WeakRef<A> {
     fn clone(&self) -> Self {
         Self {
-            handle: self.handle.clone(),
+            weak_handle: self.weak_handle.clone(),
         }
     }
 }
 
-impl<A: Actor> WeakActorRef<A, Addr<A>> for WeakRef<A> {
-    fn upgrade(&self) -> Option<Addr<A>> {
-        match self.handle.upgrade() {
+impl<A: Actor> WeakActorRef<A, LocalAddr<A>> for WeakRef<A> {
+    fn upgrade(&self) -> Option<LocalAddr<A>> {
+        match self.weak_handle.upgrade() {
             Some(handle) => {
                 if handle.is_cancelled() {
                     None
                 } else {
-                    Some(Addr::new(&handle))
+                    Some(LocalAddr::new(&handle))
                 }
             }
             None => None,

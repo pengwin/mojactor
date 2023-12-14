@@ -42,12 +42,13 @@ impl<A: VirtualActor> MessageHandler<GarbageCollectActors> for HousekeepingActor
         // remove idle actors
         for id in idle_actors {
             println!("Shutting down actor {actor_name}::{id}");
-            if let Some(handle) = self.cache.get(&id) {
-                let shutdown = handle.graceful_shutdown(Duration::from_millis(100)).await;
+            let handle = self.cache.remove(&id);
+            if let Some(handle) = handle {
+                let shutdown = handle.1.graceful_shutdown(Duration::from_millis(100)).await;
                 if let Err(e) = shutdown {
                     eprintln!("Failed to gracefully shutdown actor {id}: {e:?}");
                 }
-                
+
                 println!("Actor {actor_name}::{id} is idle and has been successfully shutdown");
             }
 

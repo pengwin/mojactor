@@ -8,7 +8,7 @@ use crate::address::ActorHandle;
 use super::{context::HousekeepingContext, envelope::InnerMessageEnvelope};
 
 pub struct HousekeepingActor<A: VirtualActor> {
-    pub(super) cache: Arc<DashMap<A::ActorId, Arc<ActorHandle<A>>>>,
+    pub(super) cache: Arc<DashMap<A::ActorId, ActorHandle<A>>>,
     pub(super) interval: Duration,
     pub(super) actor_idle_timeout: Duration,
 }

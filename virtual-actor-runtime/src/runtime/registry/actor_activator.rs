@@ -16,7 +16,7 @@ use crate::{
     context::ActorContextFactory,
     executor::{Handle, LocalExecutorError},
     runtime::runtime_preferences::RuntimePreferences,
-    Addr, LocalExecutor, WaitError,
+    ExecutorHandle, LocalAddr, WaitError,
 };
 
 use super::{
@@ -47,8 +47,8 @@ pub enum ActorSpawnError {
 
 pub struct ActorActivator<A: VirtualActor> {
     registration: Box<dyn VirtualActorSpawner<A>>,
-    cache: Arc<DashMap<A::ActorId, Arc<ActorHandle<A>>>>,
-    housekeeping_actor: Arc<ActorHandle<HousekeepingActor<A>>>,
+    cache: Arc<DashMap<A::ActorId, ActorHandle<A>>>,
+    housekeeping_actor: ActorHandle<HousekeepingActor<A>>,
     /// Indicates that housekeeping has started
     /// Housekeeping is lazy started when first actor is spawned
     house_keeping_started: Arc<AtomicBool>,
@@ -58,13 +58,15 @@ impl<A: VirtualActor> ActorActivator<A> {
     pub fn new<AF, CF>(
         factory: AF,
         context_factory: Arc<CF>,
-        executor: &LocalExecutor,
+        executor: &ExecutorHandle,
         housekeeping_executor: &Handle,
         preferences: Arc<RuntimePreferences>,
     ) -> Result<Self, LocalExecutorError>
     where
-        <<AF as ActorFactory>::Actor as Actor>::ActorContext:
-            ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+        <<AF as ActorFactory>::Actor as Actor>::ActorContext: ActorContext<
+            <AF as ActorFactory>::Actor,
+            Addr = LocalAddr<<AF as ActorFactory>::Actor>,
+        >,
         AF: VirtualActorFactory + 'static,
         AF: ActorFactory<Actor = A> + 'static,
         <AF as ActorFactory>::Actor: VirtualActor + 'static,
@@ -98,7 +100,7 @@ impl<A: VirtualActor> ActorActivator<A> {
         &self,
         id: A::ActorId,
         wait_timeout: Duration,
-    ) -> Result<Arc<ActorHandle<A>>, ActorSpawnError> {
+    ) -> Result<ActorHandle<A>, ActorSpawnError> {
         if let Some(handle) = self.cache.get(&id) {
             return Ok(handle.value().clone());
         }

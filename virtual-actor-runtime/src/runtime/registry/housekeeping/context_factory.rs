@@ -1,8 +1,8 @@
-use std::{marker::PhantomData, sync::Arc};
+use std::marker::PhantomData;
 
 use virtual_actor::{Actor, VirtualActor};
 
-use crate::{address::ActorHandle, context::ActorContextFactory, Addr};
+use crate::{address::ActorHandle, context::ActorContextFactory, LocalAddr};
 
 use super::{context::HousekeepingContext, HousekeepingActor};
 
@@ -19,10 +19,10 @@ impl<A: VirtualActor> Default for HousekeepingContextFactory<A> {
 impl<A: VirtualActor> ActorContextFactory<HousekeepingActor<A>> for HousekeepingContextFactory<A> {
     fn create_context(
         &self,
-        handle: &Arc<ActorHandle<HousekeepingActor<A>>>,
+        handle: &ActorHandle<HousekeepingActor<A>>,
     ) -> <HousekeepingActor<A> as Actor>::ActorContext {
         HousekeepingContext {
-            addr: Addr::new(handle),
+            addr: LocalAddr::new(handle),
         }
     }
 }

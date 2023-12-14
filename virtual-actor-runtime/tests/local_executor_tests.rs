@@ -1,6 +1,6 @@
 use std::{sync::Arc, thread::ThreadId};
 
-use virtual_actor_runtime::{prelude::*, LocalExecutor};
+use virtual_actor_runtime::prelude::*;
 
 #[derive(Message)]
 #[result(ThreadId)]
@@ -34,8 +34,8 @@ impl MessageHandler<GetThreadId> for TestActor {
 
 #[tokio::test]
 async fn test_local_executor_actor_threads_id() -> Result<(), Box<dyn std::error::Error>> {
-    let runtime = Runtime::new()?;
-    let executor = LocalExecutor::new()?;
+    let mut runtime = Runtime::new()?;
+    let executor = runtime.create_executor()?;
 
     let actor_factory = Arc::new(TestActorFactory);
 
@@ -66,9 +66,9 @@ async fn test_local_executor_actor_threads_id() -> Result<(), Box<dyn std::error
 
 #[tokio::test]
 async fn test_local_executors_threads_id() -> Result<(), Box<dyn std::error::Error>> {
-    let runtime = Runtime::new()?;
-    let executor_one = LocalExecutor::new()?;
-    let executor_two = LocalExecutor::new()?;
+    let mut runtime = Runtime::new()?;
+    let executor_one = runtime.create_executor()?;
+    let executor_two = runtime.create_executor()?;
 
     let actor_factory = Arc::new(TestActorFactory);
 

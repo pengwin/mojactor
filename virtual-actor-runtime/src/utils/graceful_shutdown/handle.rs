@@ -38,7 +38,7 @@ impl GracefulShutdownHandle {
 }
 
 impl GracefulShutdown for GracefulShutdownHandle {
-    async fn graceful_shutdown(&self, timeout: std::time::Duration) -> Result<(), WaitError> {
+    async fn graceful_shutdown(self, timeout: std::time::Duration) -> Result<(), WaitError> {
         self.shutdown();
         self.wait(timeout).await
     }

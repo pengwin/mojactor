@@ -28,7 +28,7 @@ type ThreadHandle = std::thread::JoinHandle<()>;
 pub struct LocalExecutor {
     /// Thread handle
     thread_handle: ThreadHandle,
-    self_handle: Arc<Handle>,
+    self_handle: Handle,
     /// Graceful shutdown handle for spawner
     spawner_gs: GracefulShutdownHandle,
     /// Graceful shutdown handle for local set
@@ -40,9 +40,9 @@ pub struct LocalExecutor {
 }
 
 impl GracefulShutdown for LocalExecutor {
-    async fn graceful_shutdown(&self, timeout: std::time::Duration) -> Result<(), WaitError> {
+    async fn graceful_shutdown(self, timeout: std::time::Duration) -> Result<(), WaitError> {
         // cancel message receiving
-        self.self_handle.mailbox_cancellation.cancel();
+        self.self_handle.mailbox_cancellation().cancel();
         // wait for spawn task to finish processing all pending tasks
         // to ensure that no more actors will be spawned
         match self.spawner_gs.wait(timeout).await {
@@ -67,7 +67,7 @@ impl GracefulShutdown for LocalExecutor {
             Err(WaitError::Timeout(w)) => {
                 eprintln!("{w} wait timeout");
                 // if local set is not finished, then shutdown actor execution
-                self.self_handle.executor_cancellation.cancel();
+                self.self_handle.executor_cancellation().cancel();
                 Ok(())
             }
             Err(e) => Err(e),
@@ -80,24 +80,6 @@ impl GracefulShutdown for LocalExecutor {
 }
 
 impl LocalExecutor {
-    /// Starts executor thread
-    /// with preferences
-    ///
-    /// # Errors
-    ///
-    /// Returns error if executor thread is not started
-    /// Returns error if spawner was not send
-    pub fn new() -> Result<Self, LocalExecutorError> {
-        let preferences = ExecutorPreferences::default();
-        Self::with_preferences(preferences)
-    }
-
-    /// Returns clonable handle for this executor to spawn actors
-    #[must_use]
-    pub(crate) fn clone_handle(&self) -> Arc<Handle> {
-        self.self_handle.clone()
-    }
-
     /// Returns clonable handle for this executor to spawn actors
     #[must_use]
     pub(crate) fn handle(&self) -> &Handle {
@@ -111,8 +93,7 @@ impl LocalExecutor {
     ///
     /// Returns error if executor thread is not started
     /// Returns error if spawner was not send
-    #[allow(clippy::needless_pass_by_value)]
-    pub fn with_preferences(preferences: ExecutorPreferences) -> Result<Self, LocalExecutorError> {
+    pub fn new(preferences: &ExecutorPreferences) -> Result<Self, LocalExecutorError> {
         let executor_cancellation = CancellationToken::new();
         let mailbox_cancellation = CancellationToken::new();
 
@@ -137,18 +118,18 @@ impl LocalExecutor {
             local_set_cancellation.clone(),
         );
         let thread_handle = Self::start_thread(
-            &preferences,
+            preferences,
             spawner,
             local_set_stopped.clone(),
             thread_stopped_notify.clone(),
             local_set_cancellation.clone(),
         )?;
 
-        let self_handle = Arc::new(Handle {
+        let self_handle = Handle::new(
             spawner_dispatcher,
             executor_cancellation,
             mailbox_cancellation,
-        });
+        );
 
         Ok(Self {
             thread_handle,

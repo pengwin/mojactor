@@ -3,14 +3,14 @@ use std::{marker::PhantomData, sync::Arc};
 use tokio::select;
 use virtual_actor::{Actor, ActorContext, ActorFactory, LocalActor, LocalActorFactory};
 
-use crate::{address::ActorHandle, context::ActorContextFactory, Addr};
+use crate::{address::ActorHandle, context::ActorContextFactory, LocalAddr};
 
 use super::{actor_loop::ActorLoop, error::ActorTaskError, mailbox::Mailbox};
 
 pub struct LocalActorLoop<AF, CF>
 where
     <<AF as ActorFactory>::Actor as Actor>::ActorContext:
-        ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+        ActorContext<<AF as ActorFactory>::Actor, Addr = LocalAddr<<AF as ActorFactory>::Actor>>,
     AF: LocalActorFactory + 'static,
     <AF as ActorFactory>::Actor: LocalActor + 'static,
     CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
@@ -22,7 +22,7 @@ where
 impl<AF, CF> Default for LocalActorLoop<AF, CF>
 where
     <<AF as ActorFactory>::Actor as Actor>::ActorContext:
-        ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+        ActorContext<<AF as ActorFactory>::Actor, Addr = LocalAddr<<AF as ActorFactory>::Actor>>,
     AF: LocalActorFactory + 'static,
     <AF as ActorFactory>::Actor: LocalActor + 'static,
     CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
@@ -38,7 +38,7 @@ where
 impl<AF, CF> Clone for LocalActorLoop<AF, CF>
 where
     <<AF as ActorFactory>::Actor as Actor>::ActorContext:
-        ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+        ActorContext<<AF as ActorFactory>::Actor, Addr = LocalAddr<<AF as ActorFactory>::Actor>>,
     AF: LocalActorFactory + 'static,
     <AF as ActorFactory>::Actor: LocalActor + 'static,
     CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
@@ -51,7 +51,7 @@ where
 impl<AF, CF> ActorLoop<AF, CF> for LocalActorLoop<AF, CF>
 where
     <<AF as ActorFactory>::Actor as Actor>::ActorContext:
-        ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+        ActorContext<<AF as ActorFactory>::Actor, Addr = LocalAddr<<AF as ActorFactory>::Actor>>,
     AF: LocalActorFactory + 'static,
     <AF as ActorFactory>::Actor: LocalActor + 'static,
     CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
@@ -61,7 +61,7 @@ where
         mut mailbox: Mailbox<<AF as ActorFactory>::Actor>,
         actor_factory: Arc<AF>,
         context_factory: Arc<CF>,
-        handle: Arc<ActorHandle<<AF as ActorFactory>::Actor>>,
+        handle: ActorHandle<<AF as ActorFactory>::Actor>,
     ) -> Result<(), ActorTaskError> {
         let mut actor = actor_factory.create_actor().await;
 

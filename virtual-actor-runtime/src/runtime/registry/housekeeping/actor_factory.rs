@@ -8,14 +8,14 @@ use crate::{address::ActorHandle, runtime::runtime_preferences::RuntimePreferenc
 use super::HousekeepingActor;
 
 pub struct HousekeepingActorFactory<A: VirtualActor> {
-    cache: Arc<DashMap<A::ActorId, Arc<ActorHandle<A>>>>,
+    cache: Arc<DashMap<A::ActorId, ActorHandle<A>>>,
     actor_idle_timeout: Duration,
     preferences: Arc<RuntimePreferences>,
 }
 
 impl<A: VirtualActor> HousekeepingActorFactory<A> {
     pub fn new(
-        cache: Arc<DashMap<A::ActorId, Arc<ActorHandle<A>>>>,
+        cache: Arc<DashMap<A::ActorId, ActorHandle<A>>>,
         actor_idle_timeout: Duration,
         preferences: Arc<RuntimePreferences>,
     ) -> Self {

@@ -9,7 +9,7 @@ use crate::executor::actor_tasks_registry::{
 };
 use crate::utils::atomic_timestamp::AtomicTimestamp;
 use crate::utils::notify_once::NotifyOnce;
-use crate::{address::ActorHandle, address::Addr};
+use crate::{address::ActorHandle, address::LocalAddr};
 use futures::FutureExt;
 use virtual_actor::{Actor, ActorContext, ActorFactory};
 
@@ -21,7 +21,7 @@ use super::{
 pub struct LocalSpawnedActorImpl<AF, CF, AL>
 where
     <<AF as ActorFactory>::Actor as Actor>::ActorContext:
-        ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+        ActorContext<<AF as ActorFactory>::Actor, Addr = LocalAddr<<AF as ActorFactory>::Actor>>,
     AF: ActorFactory + 'static,
     CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
     AL: ActorLoop<AF, CF> + 'static,
@@ -32,7 +32,7 @@ where
     /// Actor context factory
     context_factory: Arc<CF>,
     /// Actor handle
-    handle: Arc<ActorHandle<<AF as ActorFactory>::Actor>>,
+    handle: ActorHandle<<AF as ActorFactory>::Actor>,
     /// Actor loop
     actor_loop: AL,
     /// Last received message timestamp
@@ -42,7 +42,7 @@ where
 impl<AF, CF, AL> LocalSpawnedActorImpl<AF, CF, AL>
 where
     <<AF as ActorFactory>::Actor as Actor>::ActorContext:
-        ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+        ActorContext<<AF as ActorFactory>::Actor, Addr = LocalAddr<<AF as ActorFactory>::Actor>>,
     AF: ActorFactory + 'static,
     CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
     AL: ActorLoop<AF, CF> + 'static,
@@ -52,13 +52,15 @@ where
         id: SpawnedActorId,
         actor_factory: &Arc<AF>,
         context_factory: &Arc<CF>,
-        handle: &Arc<ActorHandle<<AF as ActorFactory>::Actor>>,
+        handle: &ActorHandle<<AF as ActorFactory>::Actor>,
         actor_loop: AL,
         last_received_msg_timestamp: AtomicTimestamp,
     ) -> Self
     where
-        <<AF as ActorFactory>::Actor as Actor>::ActorContext:
-            ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+        <<AF as ActorFactory>::Actor as Actor>::ActorContext: ActorContext<
+            <AF as ActorFactory>::Actor,
+            Addr = LocalAddr<<AF as ActorFactory>::Actor>,
+        >,
         AF: ActorFactory + 'static,
         CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
         AL: ActorLoop<AF, CF> + 'static,
@@ -124,7 +126,7 @@ where
 impl<AF, CF, AL> LocalSpawnedActor for LocalSpawnedActorImpl<AF, CF, AL>
 where
     <<AF as ActorFactory>::Actor as Actor>::ActorContext:
-        ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+        ActorContext<<AF as ActorFactory>::Actor, Addr = LocalAddr<<AF as ActorFactory>::Actor>>,
     AF: ActorFactory + 'static,
     CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
     AL: ActorLoop<AF, CF> + 'static,

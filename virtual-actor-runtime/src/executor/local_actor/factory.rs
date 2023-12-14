@@ -6,7 +6,10 @@ use virtual_actor::{
     VirtualActorFactory,
 };
 
-use crate::{address::ActorHandle, context::ActorContextFactory, Addr, utils::atomic_timestamp::AtomicTimestamp};
+use crate::{
+    address::ActorHandle, context::ActorContextFactory, utils::atomic_timestamp::AtomicTimestamp,
+    LocalAddr,
+};
 
 use super::{
     local_actor_loop::LocalActorLoop, local_spawned_actor_impl::LocalSpawnedActorImpl,
@@ -21,23 +24,23 @@ pub fn create_local_actor<AF, CF>(
     mailbox_cancellation: CancellationToken,
 ) -> (
     Box<dyn LocalSpawnedActor>,
-    Arc<ActorHandle<<AF as ActorFactory>::Actor>>,
+    ActorHandle<<AF as ActorFactory>::Actor>,
 )
 where
     <<AF as ActorFactory>::Actor as Actor>::ActorContext:
-        ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+        ActorContext<<AF as ActorFactory>::Actor, Addr = LocalAddr<<AF as ActorFactory>::Actor>>,
     AF: LocalActorFactory + 'static,
     <AF as ActorFactory>::Actor: LocalActor + 'static,
     CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
 {
     let dispatcher_ref = Arc::new(OnceLock::new());
     let last_received_msg_timestamp = AtomicTimestamp::new();
-    let handle = Arc::new(ActorHandle::new(
+    let handle = ActorHandle::new(
         dispatcher_ref,
         execution_cancellation,
         mailbox_cancellation,
         last_received_msg_timestamp.clone(),
-    ));
+    );
     let spawner = LocalSpawnedActorImpl::new(
         Uuid::new_v4(),
         actor_factory,
@@ -59,32 +62,29 @@ pub fn create_virtual_actor<AF, CF>(
     mailbox_cancellation: CancellationToken,
 ) -> (
     Box<dyn LocalSpawnedActor>,
-    Arc<ActorHandle<<AF as ActorFactory>::Actor>>,
+    ActorHandle<<AF as ActorFactory>::Actor>,
 )
 where
     <<AF as ActorFactory>::Actor as Actor>::ActorContext:
-        ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+        ActorContext<<AF as ActorFactory>::Actor, Addr = LocalAddr<<AF as ActorFactory>::Actor>>,
     AF: VirtualActorFactory + 'static,
     <AF as ActorFactory>::Actor: VirtualActor + 'static,
     CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
 {
     let dispatcher_ref = Arc::new(OnceLock::new());
     let last_received_msg_timestamp = AtomicTimestamp::new();
-    let handle = Arc::new(ActorHandle::new(
+    let handle = ActorHandle::new(
         dispatcher_ref,
         execution_cancellation,
         mailbox_cancellation,
         last_received_msg_timestamp.clone(),
-    ));
+    );
     let spawner = LocalSpawnedActorImpl::new(
         Uuid::new_v4(),
         actor_factory,
         context_factory,
         &handle,
-        VirtualActorLoop::new(
-            actor_id,
-            handle.last_processed_msg_timestamp(),
-        ),
+        VirtualActorLoop::new(actor_id, handle.last_processed_msg_timestamp()),
         last_received_msg_timestamp,
     );
 

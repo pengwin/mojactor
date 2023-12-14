@@ -4,7 +4,7 @@ use std::future::Future;
 
 use virtual_actor::{Actor, ActorContext, ActorFactory};
 
-use crate::{address::ActorHandle, context::ActorContextFactory, Addr};
+use crate::{address::ActorHandle, context::ActorContextFactory, LocalAddr};
 
 use super::{error::ActorTaskError, mailbox::Mailbox};
 
@@ -12,7 +12,7 @@ use super::{error::ActorTaskError, mailbox::Mailbox};
 pub trait ActorLoop<AF, CF>: Send + Sync + Clone + 'static
 where
     <<AF as ActorFactory>::Actor as Actor>::ActorContext:
-        ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+        ActorContext<<AF as ActorFactory>::Actor, Addr = LocalAddr<<AF as ActorFactory>::Actor>>,
     AF: ActorFactory + 'static,
     CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
 {
@@ -22,6 +22,6 @@ where
         mailbox: Mailbox<<AF as ActorFactory>::Actor>,
         actor_factory: Arc<AF>,
         context_factory: Arc<CF>,
-        handle: Arc<ActorHandle<<AF as ActorFactory>::Actor>>,
+        handle: ActorHandle<<AF as ActorFactory>::Actor>,
     ) -> impl Future<Output = Result<(), ActorTaskError>>;
 }

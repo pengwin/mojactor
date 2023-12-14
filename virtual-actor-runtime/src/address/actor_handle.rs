@@ -1,6 +1,6 @@
 //! Actor handler implementation
 
-use std::sync::{Arc, OnceLock};
+use std::sync::{Arc, OnceLock, Weak};
 
 use tokio::{select, sync::Notify};
 use tokio_util::sync::CancellationToken;
@@ -13,11 +13,28 @@ use crate::{
         notify_once::NotifyOnce,
         waiter::{waiter, WaitError},
     },
-    Addr,
+    LocalAddr,
 };
 
-/// Actor handler
-pub struct ActorHandle<A: Actor> {
+pub struct WeakActorHandle<A: Actor> {
+    inner: Weak<ActorInner<A>>,
+}
+
+impl<A: Actor> WeakActorHandle<A> {
+    pub fn upgrade(&self) -> Option<ActorHandle<A>> {
+        self.inner.upgrade().map(|inner| ActorHandle { inner })
+    }
+}
+
+impl<A: Actor> Clone for WeakActorHandle<A> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
+}
+
+struct ActorInner<A: Actor> {
     /// Actor dispatcher
     dispatcher: Arc<OnceLock<MessageDispatcher<A>>>,
     /// Dispatcher ready notify
@@ -34,13 +51,26 @@ pub struct ActorHandle<A: Actor> {
     last_processed_msg_timestamp: AtomicTimestamp,
 }
 
+/// Actor handler
+pub struct ActorHandle<A: Actor> {
+    inner: Arc<ActorInner<A>>,
+}
+
+impl<A: Actor> Clone for ActorHandle<A> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
+}
+
 impl<A: Actor> GracefulShutdown for ActorHandle<A> {
-    async fn graceful_shutdown(&self, timeout: std::time::Duration) -> Result<(), WaitError> {
+    async fn graceful_shutdown(self, timeout: std::time::Duration) -> Result<(), WaitError> {
         // first stop message receiving
-        self.mailbox_cancellation.cancel();
+        self.inner.mailbox_cancellation.cancel();
         let res = waiter(
             "actor_messaging_stopped",
-            self.actor_stopped.inner(),
+            self.inner.actor_stopped.inner(),
             timeout,
             None,
         )
@@ -48,14 +78,14 @@ impl<A: Actor> GracefulShutdown for ActorHandle<A> {
         if let Err(WaitError::Timeout(_)) = res {
             // if timeout is reached
             // then cancel actor execution
-            self.execution_cancellation.cancel();
+            self.inner.execution_cancellation.cancel();
         } else {
             return res;
         }
 
         waiter(
             "actor_execution_stopped",
-            self.actor_stopped.inner(),
+            self.inner.actor_stopped.inner(),
             timeout,
             None,
         )
@@ -72,62 +102,67 @@ impl<A: Actor> ActorHandle<A> {
         last_received_msg_timestamp: AtomicTimestamp,
     ) -> Self {
         Self {
-            dispatcher,
-            actor_stopped: Arc::new(NotifyOnce::new()),
-            dispatcher_ready: Arc::new(Notify::new()),
-            execution_cancellation,
-            mailbox_cancellation,
-            last_received_msg_timestamp,
-            last_processed_msg_timestamp: AtomicTimestamp::new(),
+            inner: Arc::new(ActorInner {
+                dispatcher,
+                actor_stopped: Arc::new(NotifyOnce::new()),
+                dispatcher_ready: Arc::new(Notify::new()),
+                execution_cancellation,
+                mailbox_cancellation,
+                last_received_msg_timestamp,
+                last_processed_msg_timestamp: AtomicTimestamp::new(),
+            }),
         }
     }
 
     /// Set dispatcher
-    pub fn set_dispatcher(&self, dispatcher: MessageDispatcher<A>) -> Result<(), &'static str> {
-        match self.dispatcher.set(dispatcher) {
+    pub(crate) fn set_dispatcher(
+        &self,
+        dispatcher: MessageDispatcher<A>,
+    ) -> Result<(), &'static str> {
+        match self.inner.dispatcher.set(dispatcher) {
             Ok(()) => {
-                self.dispatcher_ready.notify_one();
+                self.inner.dispatcher_ready.notify_one();
                 Ok(())
             }
             Err(_) => Err("Dispatcher already set"),
         }
     }
 
-    pub fn last_processed_msg_timestamp(&self) -> &AtomicTimestamp {
-        &self.last_processed_msg_timestamp
+    pub(crate) fn last_processed_msg_timestamp(&self) -> &AtomicTimestamp {
+        &self.inner.last_processed_msg_timestamp
     }
 
-    pub fn last_received_msg_timestamp(&self) -> &AtomicTimestamp {
-        &self.last_received_msg_timestamp
+    pub(crate) fn last_received_msg_timestamp(&self) -> &AtomicTimestamp {
+        &self.inner.last_received_msg_timestamp
     }
 
     /// Clone cancellation token
-    pub fn cancellation_token(&self) -> &CancellationToken {
-        &self.execution_cancellation
+    pub(crate) fn cancellation_token(&self) -> &CancellationToken {
+        &self.inner.execution_cancellation
     }
 
     /// Clone mailbox cancellation token
-    pub fn mailbox_cancellation(&self) -> &CancellationToken {
-        &self.mailbox_cancellation
+    pub(crate) fn mailbox_cancellation(&self) -> &CancellationToken {
+        &self.inner.mailbox_cancellation
     }
 
     /// Clone notify
-    pub fn stop_notify(&self) -> &Arc<NotifyOnce> {
-        &self.actor_stopped
+    pub(crate) fn stop_notify(&self) -> &Arc<NotifyOnce> {
+        &self.inner.actor_stopped
     }
 
     /// Is finished
     pub fn is_finished(&self) -> bool {
-        self.actor_stopped.is_notified()
+        self.inner.actor_stopped.is_notified()
     }
 
     /// Wait for dispatcher to be set
     pub async fn wait_for_dispatcher(&self, timeout: std::time::Duration) -> Result<(), WaitError> {
         waiter(
             "wait_for_dispatcher",
-            &self.dispatcher_ready,
+            &self.inner.dispatcher_ready,
             timeout,
-            Some(&self.execution_cancellation),
+            Some(&self.inner.execution_cancellation),
         )
         .await
     }
@@ -139,10 +174,17 @@ impl<A: Actor> ActorHandle<A> {
         A: MessageHandler<M>,
         <A as Actor>::MessagesEnvelope: MessageEnvelopeFactory<A, M>,
     {
-        let dispatcher = self.dispatcher.get().ok_or(AddrError::ActorNotReady)?;
+        if self.is_finished() {
+            return Err(AddrError::Stopped);
+        }
+        let dispatcher = self
+            .inner
+            .dispatcher
+            .get()
+            .ok_or(AddrError::ActorNotReady)?;
         select! {
             res = dispatcher.send(msg) => res.map_err(AddrError::dispatcher_error),
-            () = self.execution_cancellation.cancelled() => Err(AddrError::Cancelled),
+            () = self.inner.execution_cancellation.cancelled() => Err(AddrError::Stopped),
         }
     }
 
@@ -153,12 +195,20 @@ impl<A: Actor> ActorHandle<A> {
         A: MessageHandler<M>,
         <A as Actor>::MessagesEnvelope: MessageEnvelopeFactory<A, M>,
     {
-        let dispatcher = self.dispatcher.get().ok_or(AddrError::ActorNotReady)?;
-        if self.mailbox_cancellation.is_cancelled() {
-            return Err(AddrError::Cancelled);
+        if self.is_finished() {
+            return Err(AddrError::Stopped);
         }
-        if self.execution_cancellation.is_cancelled() {
-            return Err(AddrError::Cancelled);
+
+        let dispatcher = self
+            .inner
+            .dispatcher
+            .get()
+            .ok_or(AddrError::ActorNotReady)?;
+        if self.inner.mailbox_cancellation.is_cancelled() {
+            return Err(AddrError::Stopped);
+        }
+        if self.inner.execution_cancellation.is_cancelled() {
+            return Err(AddrError::Stopped);
         }
 
         dispatcher
@@ -168,11 +218,18 @@ impl<A: Actor> ActorHandle<A> {
 
     /// Checks if actor is cancelled
     pub fn is_cancelled(&self) -> bool {
-        self.execution_cancellation.is_cancelled() || self.mailbox_cancellation.is_cancelled()
+        self.inner.execution_cancellation.is_cancelled()
+            || self.inner.mailbox_cancellation.is_cancelled()
     }
 
     /// Get actor addr
-    pub fn addr(self: &Arc<Self>) -> Addr<A> {
-        Addr::new(self)
+    pub fn addr(&self) -> LocalAddr<A> {
+        LocalAddr::new(self)
+    }
+
+    pub fn weak_ref(&self) -> WeakActorHandle<A> {
+        WeakActorHandle {
+            inner: Arc::downgrade(&self.inner),
+        }
     }
 }

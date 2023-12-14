@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use serde::Serialize;
 use virtual_actor::MessageHandler;
-use virtual_actor_runtime::Addr;
+use virtual_actor_runtime::LocalAddr;
 
 use virtual_actor_runtime::prelude::Actor;
 use virtual_actor_runtime::prelude::Message;
@@ -55,7 +55,7 @@ fn test_derive_virtual_actor_id() {
 struct TestContext;
 
 impl virtual_actor::ActorContext<TestActorWithContext> for TestContext {
-    type Addr = Addr<TestActorWithContext>;
+    type Addr = LocalAddr<TestActorWithContext>;
 
     fn self_addr(&self) -> &Self::Addr {
         todo!()

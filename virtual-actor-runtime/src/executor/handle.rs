@@ -6,7 +6,7 @@ use virtual_actor::{
     VirtualActorFactory,
 };
 
-use crate::{address::ActorHandle, context::ActorContextFactory, Addr};
+use crate::{address::ActorHandle, context::ActorContextFactory, LocalAddr};
 
 use super::{
     error::LocalExecutorError,
@@ -14,16 +14,47 @@ use super::{
     spawner::SpawnerDispatcher,
 };
 
+/// Handle to executor
+#[derive(Clone)]
 pub struct Handle {
+    inner: Arc<InnerHandle>,
+}
+
+struct InnerHandle {
     /// Spawner dispatcher
-    pub(crate) spawner_dispatcher: SpawnerDispatcher,
+    spawner_dispatcher: SpawnerDispatcher,
     /// Cancellation actor execution
-    pub(crate) executor_cancellation: CancellationToken,
+    executor_cancellation: CancellationToken,
     /// Cancellation actor message processing
-    pub(crate) mailbox_cancellation: CancellationToken,
+    mailbox_cancellation: CancellationToken,
 }
 
 impl Handle {
+    /// Creates new handle
+    pub(crate) fn new(
+        spawner_dispatcher: SpawnerDispatcher,
+        executor_cancellation: CancellationToken,
+        mailbox_cancellation: CancellationToken,
+    ) -> Self {
+        Self {
+            inner: Arc::new(InnerHandle {
+                spawner_dispatcher,
+                executor_cancellation,
+                mailbox_cancellation,
+            }),
+        }
+    }
+
+    /// Accessor to cancellation token for actor execution
+    pub(crate) fn executor_cancellation(&self) -> &CancellationToken {
+        &self.inner.executor_cancellation
+    }
+
+    /// Accessor to cancellation token for actor message processing
+    pub(crate) fn mailbox_cancellation(&self) -> &CancellationToken {
+        &self.inner.mailbox_cancellation
+    }
+
     /// Spawns local actor on thread
     ///
     /// # Errors
@@ -34,10 +65,12 @@ impl Handle {
         &self,
         actor_factory: &Arc<AF>,
         context_factory: &Arc<CF>,
-    ) -> Result<Arc<ActorHandle<<AF as ActorFactory>::Actor>>, LocalExecutorError>
+    ) -> Result<ActorHandle<<AF as ActorFactory>::Actor>, LocalExecutorError>
     where
-        <<AF as ActorFactory>::Actor as Actor>::ActorContext:
-            ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+        <<AF as ActorFactory>::Actor as Actor>::ActorContext: ActorContext<
+            <AF as ActorFactory>::Actor,
+            Addr = LocalAddr<<AF as ActorFactory>::Actor>,
+        >,
         AF: LocalActorFactory + 'static,
         <AF as ActorFactory>::Actor: LocalActor + 'static,
         CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
@@ -60,10 +93,12 @@ impl Handle {
         &self,
         actor_factory: &Arc<AF>,
         context_factory: &Arc<CF>,
-    ) -> Result<Arc<ActorHandle<<AF as ActorFactory>::Actor>>, LocalExecutorError>
+    ) -> Result<ActorHandle<<AF as ActorFactory>::Actor>, LocalExecutorError>
     where
-        <<AF as ActorFactory>::Actor as Actor>::ActorContext:
-            ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+        <<AF as ActorFactory>::Actor as Actor>::ActorContext: ActorContext<
+            <AF as ActorFactory>::Actor,
+            Addr = LocalAddr<<AF as ActorFactory>::Actor>,
+        >,
         AF: LocalActorFactory + 'static,
         <AF as ActorFactory>::Actor: LocalActor + 'static,
         CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
@@ -86,10 +121,12 @@ impl Handle {
         actor_id: <<AF as ActorFactory>::Actor as VirtualActor>::ActorId,
         actor_factory: &Arc<AF>,
         context_factory: &Arc<CF>,
-    ) -> Result<Arc<ActorHandle<<AF as ActorFactory>::Actor>>, LocalExecutorError>
+    ) -> Result<ActorHandle<<AF as ActorFactory>::Actor>, LocalExecutorError>
     where
-        <<AF as ActorFactory>::Actor as Actor>::ActorContext:
-            ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+        <<AF as ActorFactory>::Actor as Actor>::ActorContext: ActorContext<
+            <AF as ActorFactory>::Actor,
+            Addr = LocalAddr<<AF as ActorFactory>::Actor>,
+        >,
         AF: VirtualActorFactory + 'static,
         <AF as ActorFactory>::Actor: VirtualActor + 'static,
         CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
@@ -110,10 +147,12 @@ impl Handle {
         actor_factory: &Arc<AF>,
         context_factory: &Arc<CF>,
         spawner: F,
-    ) -> Result<Arc<ActorHandle<<AF as ActorFactory>::Actor>>, LocalExecutorError>
+    ) -> Result<ActorHandle<<AF as ActorFactory>::Actor>, LocalExecutorError>
     where
-        <<AF as ActorFactory>::Actor as Actor>::ActorContext:
-            ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+        <<AF as ActorFactory>::Actor as Actor>::ActorContext: ActorContext<
+            <AF as ActorFactory>::Actor,
+            Addr = LocalAddr<<AF as ActorFactory>::Actor>,
+        >,
         AF: ActorFactory + 'static,
         CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
         F: FnOnce(
@@ -123,15 +162,16 @@ impl Handle {
             CancellationToken,
         ) -> (
             Box<dyn LocalSpawnedActor>,
-            Arc<ActorHandle<<AF as ActorFactory>::Actor>>,
+            ActorHandle<<AF as ActorFactory>::Actor>,
         ),
     {
-        let execution_ct = self.executor_cancellation.child_token();
-        let mailbox_ct = self.mailbox_cancellation.child_token();
+        let execution_ct = self.inner.executor_cancellation.child_token();
+        let mailbox_ct = self.inner.mailbox_cancellation.child_token();
         let (local_actor, handle) =
             spawner(actor_factory, context_factory, execution_ct, mailbox_ct);
 
-        self.spawner_dispatcher
+        self.inner
+            .spawner_dispatcher
             .send(local_actor)
             .map_err(|e| LocalExecutorError::SpawnerSendError(format!("{e:?}")))?;
 
@@ -143,10 +183,12 @@ impl Handle {
         actor_factory: &Arc<AF>,
         context_factory: &Arc<CF>,
         spawner: F,
-    ) -> Result<Arc<ActorHandle<<AF as ActorFactory>::Actor>>, LocalExecutorError>
+    ) -> Result<ActorHandle<<AF as ActorFactory>::Actor>, LocalExecutorError>
     where
-        <<AF as ActorFactory>::Actor as Actor>::ActorContext:
-            ActorContext<<AF as ActorFactory>::Actor, Addr = Addr<<AF as ActorFactory>::Actor>>,
+        <<AF as ActorFactory>::Actor as Actor>::ActorContext: ActorContext<
+            <AF as ActorFactory>::Actor,
+            Addr = LocalAddr<<AF as ActorFactory>::Actor>,
+        >,
         AF: ActorFactory + 'static,
         CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
         F: FnOnce(
@@ -156,7 +198,7 @@ impl Handle {
             CancellationToken,
         ) -> (
             Box<dyn LocalSpawnedActor>,
-            Arc<ActorHandle<<AF as ActorFactory>::Actor>>,
+            ActorHandle<<AF as ActorFactory>::Actor>,
         ),
     {
         let handle = self.spawn_actor_no_wait(actor_factory, context_factory, spawner)?;

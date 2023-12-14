@@ -1,6 +1,6 @@
 use virtual_actor::{ActorContext, CancellationToken, VirtualActor};
 
-use crate::Addr;
+use crate::LocalAddr;
 
 use super::HousekeepingActor;
 
@@ -11,19 +11,19 @@ impl CancellationToken for CancellationTokenStub {
 }
 
 pub struct HousekeepingContext<A: VirtualActor> {
-    pub(super) addr: Addr<HousekeepingActor<A>>,
+    pub(super) addr: LocalAddr<HousekeepingActor<A>>,
 }
 
 impl<A: VirtualActor> Clone for HousekeepingContext<A> {
     fn clone(&self) -> Self {
         Self {
-            addr: self.addr.create_clone(),
+            addr: self.addr.clone(),
         }
     }
 }
 
 impl<A: VirtualActor> ActorContext<HousekeepingActor<A>> for HousekeepingContext<A> {
-    type Addr = Addr<HousekeepingActor<A>>;
+    type Addr = LocalAddr<HousekeepingActor<A>>;
 
     type CancellationToken = CancellationTokenStub;
 

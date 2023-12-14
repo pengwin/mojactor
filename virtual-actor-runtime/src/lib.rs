@@ -7,9 +7,9 @@ mod messaging;
 mod runtime;
 mod utils;
 
-pub use address::{Addr, WeakRef};
+pub use address::{LocalAddr, WeakRef};
 pub use context::{RuntimeContext, RuntimeContextFactory};
-pub use executor::{ExecutorPreferences, LocalExecutor, TokioRuntimePreferences};
+pub use executor::{ExecutorPreferences, Handle as ExecutorHandle, TokioRuntimePreferences};
 pub use utils::waiter::WaitError;
 pub use utils::GracefulShutdown;
 

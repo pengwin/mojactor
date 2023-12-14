@@ -9,7 +9,7 @@ use bench_actor::{AksMessage, BenchActorFactory, DispatchMessage, EchoMessage};
 use criterion::{criterion_group, criterion_main, Criterion};
 use virtual_actor::ActorAddr;
 use virtual_actor_runtime::{
-    prelude::Runtime, ExecutorPreferences, LocalExecutor, TokioRuntimePreferences,
+    prelude::Runtime, ExecutorHandle, ExecutorPreferences, TokioRuntimePreferences,
 };
 
 fn create_runtime() -> Result<tokio::runtime::Runtime, Box<dyn std::error::Error>> {
@@ -21,8 +21,8 @@ fn create_runtime() -> Result<tokio::runtime::Runtime, Box<dyn std::error::Error
     Ok(rt)
 }
 
-fn create_executor() -> Result<LocalExecutor, Box<dyn std::error::Error>> {
-    let executor = LocalExecutor::with_preferences(ExecutorPreferences {
+fn create_executor(runtime: &mut Runtime) -> Result<ExecutorHandle, Box<dyn std::error::Error>> {
+    let executor = runtime.create_executor_with_preferences(&ExecutorPreferences {
         tokio_runtime_preferences: TokioRuntimePreferences {
             enable_io: false,
             enable_time: false,
@@ -37,8 +37,8 @@ fn create_executor() -> Result<LocalExecutor, Box<dyn std::error::Error>> {
 pub fn messaging_benchmark(c: &mut Criterion) -> Result<(), Box<dyn std::error::Error>> {
     let benchmark_runtime = create_runtime()?;
 
-    let runtime = Runtime::new()?;
-    let executor = create_executor()?;
+    let mut runtime = Runtime::new()?;
+    let executor = create_executor(&mut runtime)?;
 
     let actor_factory = Arc::new(BenchActorFactory {});
 
@@ -70,11 +70,10 @@ pub fn inter_thread_messaging_benchmark(
     c: &mut Criterion,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let benchmark_runtime = create_runtime()?;
+    let mut runtime = Runtime::new()?;
 
-    let executor_1 = create_executor()?;
-    let executor_2 = create_executor()?;
-
-    let runtime = Runtime::new()?;
+    let executor_1 = create_executor(&mut runtime)?;
+    let executor_2 = create_executor(&mut runtime)?;
 
     let actor_factory = Arc::new(BenchActorFactory {});
 

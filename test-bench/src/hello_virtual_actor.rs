@@ -9,7 +9,9 @@ pub struct HelloVirtualMessage {
 
 impl HelloVirtualMessage {
     pub fn new(msg: &str) -> Self {
-        Self { msg: msg.to_string() }
+        Self {
+            msg: msg.to_string(),
+        }
     }
 }
 

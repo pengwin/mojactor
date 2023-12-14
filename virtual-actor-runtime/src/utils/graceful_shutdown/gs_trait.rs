@@ -13,7 +13,7 @@ pub trait GracefulShutdown {
     /// Returns `WaitError::Timeout` if graceful shutdown timeout exceeded
     /// Returns `WaitError::Cancelled` if graceful shutdown cancelled
     fn graceful_shutdown(
-        &self,
+        self,
         timeout: std::time::Duration,
     ) -> impl Future<Output = Result<(), WaitError>>;
 }
