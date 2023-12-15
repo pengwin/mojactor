@@ -22,37 +22,36 @@ impl<A: VirtualActor> MessageHandler<GarbageCollectActors> for HousekeepingActor
         let mut idle_actors = Vec::new();
         // find all finished or idle actors
         for e in self.cache.iter() {
-            let (id, handle) = e.pair();
-            let last_received = handle.last_received_msg_timestamp().elapsed();
-            let last_processed = handle.last_processed_msg_timestamp().elapsed();
-            let is_idle =
-                last_processed < last_received && last_processed > self.actor_idle_timeout;
+            let (actor_id, handle) = e.pair();
+            self.actor_counters.update(actor_id, handle);
+            let is_idle = self.actor_counters.is_idle(actor_id, self.actor_idle_timeout);
             if handle.is_finished() {
-                println!("Actor {id} is finished");
-                self.cache.remove(id);
+                println!("Actor {actor_id} is finished");
+                self.cache.remove(actor_id);
                 continue;
             }
             if is_idle {
-                idle_actors.push(id.clone());
+                idle_actors.push(actor_id.clone());
             }
         }
 
         let actor_name = A::name();
 
         // remove idle actors
-        for id in idle_actors {
-            println!("Shutting down actor {actor_name}::{id}");
-            let handle = self.cache.remove(&id);
+        for actor_id in idle_actors {
+            println!("Shutting down actor {actor_name}::{actor_id}");
+            let handle = self.cache.remove(&actor_id);
             if let Some(handle) = handle {
-                let shutdown = handle.1.graceful_shutdown(Duration::from_millis(100)).await;
+                let shutdown = handle.graceful_shutdown(Duration::from_millis(100)).await;
                 if let Err(e) = shutdown {
-                    eprintln!("Failed to gracefully shutdown actor {id}: {e:?}");
+                    eprintln!("Failed to gracefully shutdown actor {actor_id}: {e:?}");
                 }
 
-                println!("Actor {actor_name}::{id} is idle and has been successfully shutdown");
+                println!("Actor {actor_name}::{actor_id} is idle and has been successfully shutdown");
             }
 
-            self.cache.remove(&id);
+            self.cache.remove(&actor_id);
+            self.actor_counters.remove(&actor_id);
         }
 
         // schedule next garbage collection

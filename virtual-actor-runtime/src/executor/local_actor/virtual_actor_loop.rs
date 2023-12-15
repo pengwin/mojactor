@@ -3,7 +3,7 @@ use std::{marker::PhantomData, sync::Arc};
 use tokio::select;
 use virtual_actor::{Actor, ActorContext, ActorFactory, VirtualActor, VirtualActorFactory};
 
-use crate::utils::atomic_timestamp::AtomicTimestamp;
+use crate::utils::atomic_counter::AtomicCounter;
 use crate::{address::ActorHandle, context::ActorContextFactory, LocalAddr};
 
 use super::mailbox::Mailbox;
@@ -20,7 +20,7 @@ where
     actor_id: <<AF as ActorFactory>::Actor as VirtualActor>::ActorId,
     _af: PhantomData<fn(AF) -> AF>,
     _cf: PhantomData<fn(CF) -> CF>,
-    last_processed_msg_timestamp: AtomicTimestamp,
+    processed_msg_counter: AtomicCounter,
 }
 
 impl<AF, CF> VirtualActorLoop<AF, CF>
@@ -33,15 +33,14 @@ where
 {
     pub fn new(
         actor_id: <<AF as ActorFactory>::Actor as VirtualActor>::ActorId,
-        last_processed_msg_timestamp: &AtomicTimestamp,
+        processed_msg_counter: &AtomicCounter,
     ) -> Self {
-        let last_processed_msg_timestamp = last_processed_msg_timestamp.clone();
-        last_processed_msg_timestamp.set_now();
+        let processed_msg_counter = processed_msg_counter.clone();
         Self {
             actor_id,
             _af: PhantomData,
             _cf: PhantomData,
-            last_processed_msg_timestamp,
+            processed_msg_counter,
         }
     }
 }
@@ -59,7 +58,7 @@ where
             actor_id: self.actor_id.clone(),
             _af: PhantomData,
             _cf: PhantomData,
-            last_processed_msg_timestamp: self.last_processed_msg_timestamp.clone(),
+            processed_msg_counter: self.processed_msg_counter.clone(),
         }
     }
 }
@@ -89,7 +88,7 @@ where
                 r = actor.handle_envelope(envelope, &context) => r.map_err(ActorTaskError::ResponderError),
                 () = task_ct.cancelled() => Err(ActorTaskError::Cancelled),
             }?;
-            self.last_processed_msg_timestamp.set_now();
+            self.processed_msg_counter.increment();
         }
         //println!("Actor {id} is finished", id = self.actor_id);
         Ok(())

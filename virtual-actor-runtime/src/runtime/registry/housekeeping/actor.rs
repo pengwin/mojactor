@@ -1,16 +1,19 @@
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
-use dashmap::DashMap;
 use virtual_actor::{Actor, LocalActor, MessageHandler, VirtualActor};
 
-use crate::address::ActorHandle;
+use crate::runtime::registry::actors_cache::ActorsCache;
 
-use super::{context::HousekeepingContext, envelope::InnerMessageEnvelope};
+use super::{
+    actor_counters_map::ActorCountersMap, context::HousekeepingContext,
+    envelope::InnerMessageEnvelope,
+};
 
 pub struct HousekeepingActor<A: VirtualActor> {
-    pub(super) cache: Arc<DashMap<A::ActorId, ActorHandle<A>>>,
+    pub(super) cache: ActorsCache<A>,
     pub(super) interval: Duration,
     pub(super) actor_idle_timeout: Duration,
+    pub(super) actor_counters: ActorCountersMap<A>,
 }
 
 impl<A: VirtualActor> Actor for HousekeepingActor<A> {

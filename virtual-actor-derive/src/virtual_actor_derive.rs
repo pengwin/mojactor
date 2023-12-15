@@ -24,7 +24,7 @@ pub fn virtual_actor_derive(input: TokenStream) -> TokenStream {
         Some(field) => &field.ty,
         None => {
             return quote_spanned! {
-                actor_struct.struct_token.span =>
+                ast.ident.span() =>
                 compile_error!("Struct must have `id` field");
             }
             .into();

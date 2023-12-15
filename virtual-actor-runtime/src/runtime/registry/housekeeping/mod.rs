@@ -4,6 +4,7 @@ mod context;
 mod context_factory;
 mod envelope;
 mod gc_actors;
+mod actor_counters_map;
 
 pub use actor::HousekeepingActor;
 pub use actor_factory::HousekeepingActorFactory;

@@ -1,6 +1,6 @@
 //! Utility functions
 
-pub mod atomic_timestamp;
+pub mod atomic_counter;
 mod graceful_shutdown;
 pub mod notify_once;
 pub mod waiter;

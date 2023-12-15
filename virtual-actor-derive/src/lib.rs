@@ -44,7 +44,7 @@ pub fn derive_local_actor(input: TokenStream) -> TokenStream {
 }
 
 /// Derive macro for [`VirtualMessage`] trait
-#[proc_macro_derive(VirtualMessage, attributes(result))]
+#[proc_macro_derive(VirtualMessage)]
 pub fn derive_virtual_message(input: TokenStream) -> TokenStream {
     virtual_message_derive::virtual_message_derive(input)
 }

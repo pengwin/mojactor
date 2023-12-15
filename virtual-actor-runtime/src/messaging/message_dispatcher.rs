@@ -5,7 +5,7 @@ use std::sync::Arc;
 use tokio::sync::mpsc::error::TrySendError;
 use virtual_actor::{Actor, Message, MessageEnvelopeFactory, MessageHandler};
 
-use crate::utils::atomic_timestamp::AtomicTimestamp;
+use crate::utils::atomic_counter::AtomicCounter;
 
 use super::{mailbox::MailboxDispatcher, one_shot_responder::OneshotResponder, MailboxError};
 
@@ -30,15 +30,15 @@ impl DispatcherError {
 pub struct MessageDispatcher<A: Actor> {
     /// Sender for mailbox
     mailbox_sender: Arc<MailboxDispatcher<A::MessagesEnvelope>>,
-    /// Timestamp of last processed message
-    last_received_msg_timestamp: AtomicTimestamp,
+    /// Counter of messages dispatched to actor
+    dispatched_msg_counter: AtomicCounter,
 }
 
 impl<A: Actor> Clone for MessageDispatcher<A> {
     fn clone(&self) -> Self {
         Self {
             mailbox_sender: self.mailbox_sender.clone(),
-            last_received_msg_timestamp: self.last_received_msg_timestamp.clone(),
+            dispatched_msg_counter: self.dispatched_msg_counter.clone(),
         }
     }
 }
@@ -47,11 +47,11 @@ impl<A: Actor> MessageDispatcher<A> {
     /// Creates new message dispatcher
     pub fn new(
         mailbox_sender: MailboxDispatcher<A::MessagesEnvelope>,
-        last_received_msg_timestamp: AtomicTimestamp,
+        dispatched_msg_counter: AtomicCounter,
     ) -> Self {
         Self {
             mailbox_sender: Arc::new(mailbox_sender),
-            last_received_msg_timestamp,
+            dispatched_msg_counter,
         }
     }
 }
@@ -70,7 +70,7 @@ impl<A: Actor> MessageDispatcher<A> {
             .try_send(envelope)
             .map_err(DispatcherError::from_try_send_error)?;
 
-        self.last_received_msg_timestamp.set_now();
+        self.dispatched_msg_counter.increment();
 
         let a = receiver.await?;
 
@@ -89,7 +89,7 @@ impl<A: Actor> MessageDispatcher<A> {
             .try_send(envelope)
             .map_err(DispatcherError::from_try_send_error)?;
 
-        self.last_received_msg_timestamp.set_now();
+        self.dispatched_msg_counter.increment();
 
         Ok(())
     }

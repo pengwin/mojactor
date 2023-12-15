@@ -1,21 +1,22 @@
 use std::{sync::Arc, time::Duration};
 
-use dashmap::DashMap;
 use virtual_actor::{ActorFactory, LocalActorFactory, VirtualActor};
 
-use crate::{address::ActorHandle, runtime::runtime_preferences::RuntimePreferences};
+use crate::runtime::{
+    registry::actors_cache::ActorsCache, runtime_preferences::RuntimePreferences,
+};
 
-use super::HousekeepingActor;
+use super::{HousekeepingActor, actor_counters_map::ActorCountersMap};
 
 pub struct HousekeepingActorFactory<A: VirtualActor> {
-    cache: Arc<DashMap<A::ActorId, ActorHandle<A>>>,
+    cache: ActorsCache<A>,
     actor_idle_timeout: Duration,
     preferences: Arc<RuntimePreferences>,
 }
 
 impl<A: VirtualActor> HousekeepingActorFactory<A> {
     pub fn new(
-        cache: Arc<DashMap<A::ActorId, ActorHandle<A>>>,
+        cache: ActorsCache<A>,
         actor_idle_timeout: Duration,
         preferences: Arc<RuntimePreferences>,
     ) -> Self {
@@ -37,6 +38,7 @@ impl<A: VirtualActor> LocalActorFactory for HousekeepingActorFactory<A> {
             cache: self.cache.clone(),
             interval: self.preferences.garbage_collect_interval,
             actor_idle_timeout: self.actor_idle_timeout,
+            actor_counters: ActorCountersMap::new(),
         }
     }
 }

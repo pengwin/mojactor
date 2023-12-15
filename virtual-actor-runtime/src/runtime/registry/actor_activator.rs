@@ -6,7 +6,6 @@ use std::{
     time::Duration,
 };
 
-use dashmap::DashMap;
 use virtual_actor::{
     Actor, ActorAddr, ActorContext, ActorFactory, AddrError, VirtualActor, VirtualActorFactory,
 };
@@ -24,7 +23,7 @@ use super::{
         GarbageCollectActors, HousekeepingActor, HousekeepingActorFactory,
         HousekeepingContextFactory,
     },
-    virtual_actor_registration::{VirtualActorRegistration, VirtualActorSpawner},
+    virtual_actor_registration::{VirtualActorRegistration, VirtualActorSpawner}, actors_cache::ActorsCache,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -47,7 +46,7 @@ pub enum ActorSpawnError {
 
 pub struct ActorActivator<A: VirtualActor> {
     registration: Box<dyn VirtualActorSpawner<A>>,
-    cache: Arc<DashMap<A::ActorId, ActorHandle<A>>>,
+    cache: ActorsCache<A>,
     housekeeping_actor: ActorHandle<HousekeepingActor<A>>,
     /// Indicates that housekeeping has started
     /// Housekeeping is lazy started when first actor is spawned
@@ -72,7 +71,7 @@ impl<A: VirtualActor> ActorActivator<A> {
         <AF as ActorFactory>::Actor: VirtualActor + 'static,
         CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
     {
-        let cache = Arc::new(DashMap::new());
+        let cache = ActorsCache::new();
         let housekeeping_actor_factory = Arc::new(HousekeepingActorFactory::new(
             cache.clone(),
             Duration::from_millis(100),
@@ -102,7 +101,7 @@ impl<A: VirtualActor> ActorActivator<A> {
         wait_timeout: Duration,
     ) -> Result<ActorHandle<A>, ActorSpawnError> {
         if let Some(handle) = self.cache.get(&id) {
-            return Ok(handle.value().clone());
+            return Ok(handle);
         }
         self.start_housekeeping().await?;
         let handle = self.registration.spawn_no_wait(id.clone())?;

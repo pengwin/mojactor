@@ -7,7 +7,7 @@ use virtual_actor::{
 };
 
 use crate::{
-    address::ActorHandle, context::ActorContextFactory, utils::atomic_timestamp::AtomicTimestamp,
+    address::ActorHandle, context::ActorContextFactory, utils::atomic_counter::AtomicCounter,
     LocalAddr,
 };
 
@@ -34,12 +34,12 @@ where
     CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
 {
     let dispatcher_ref = Arc::new(OnceLock::new());
-    let last_received_msg_timestamp = AtomicTimestamp::new();
+    let dispatched_msg_counter = AtomicCounter::default();
     let handle = ActorHandle::new(
         dispatcher_ref,
         execution_cancellation,
         mailbox_cancellation,
-        last_received_msg_timestamp.clone(),
+        dispatched_msg_counter.clone(),
     );
     let spawner = LocalSpawnedActorImpl::new(
         Uuid::new_v4(),
@@ -47,7 +47,7 @@ where
         context_factory,
         &handle,
         LocalActorLoop::default(),
-        last_received_msg_timestamp,
+        dispatched_msg_counter,
     );
 
     (Box::new(spawner), handle)
@@ -72,20 +72,20 @@ where
     CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
 {
     let dispatcher_ref = Arc::new(OnceLock::new());
-    let last_received_msg_timestamp = AtomicTimestamp::new();
+    let dispatched_msg_counter = AtomicCounter::default();
     let handle = ActorHandle::new(
         dispatcher_ref,
         execution_cancellation,
         mailbox_cancellation,
-        last_received_msg_timestamp.clone(),
+        dispatched_msg_counter.clone(),
     );
     let spawner = LocalSpawnedActorImpl::new(
         Uuid::new_v4(),
         actor_factory,
         context_factory,
         &handle,
-        VirtualActorLoop::new(actor_id, handle.last_processed_msg_timestamp()),
-        last_received_msg_timestamp,
+        VirtualActorLoop::new(actor_id, handle.processed_msg_counter()),
+        dispatched_msg_counter,
     );
 
     (Box::new(spawner), handle)

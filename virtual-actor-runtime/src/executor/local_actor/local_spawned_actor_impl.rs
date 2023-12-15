@@ -7,7 +7,7 @@ use crate::context::ActorContextFactory;
 use crate::executor::actor_tasks_registry::{
     ActorTaskJoinHandle, ActorTasksRegistry, SpawnedActorId,
 };
-use crate::utils::atomic_timestamp::AtomicTimestamp;
+use crate::utils::atomic_counter::AtomicCounter;
 use crate::utils::notify_once::NotifyOnce;
 use crate::{address::ActorHandle, address::LocalAddr};
 use futures::FutureExt;
@@ -35,8 +35,8 @@ where
     handle: ActorHandle<<AF as ActorFactory>::Actor>,
     /// Actor loop
     actor_loop: AL,
-    /// Last received message timestamp
-    last_received_msg_timestamp: AtomicTimestamp,
+    /// Counter of messages dispatched to actor
+    dispatched_msg_counter: AtomicCounter,
 }
 
 impl<AF, CF, AL> LocalSpawnedActorImpl<AF, CF, AL>
@@ -54,7 +54,7 @@ where
         context_factory: &Arc<CF>,
         handle: &ActorHandle<<AF as ActorFactory>::Actor>,
         actor_loop: AL,
-        last_received_msg_timestamp: AtomicTimestamp,
+        dispatched_msg_counter: AtomicCounter,
     ) -> Self
     where
         <<AF as ActorFactory>::Actor as Actor>::ActorContext: ActorContext<
@@ -71,7 +71,7 @@ where
             context_factory: context_factory.clone(),
             handle: handle.clone(),
             actor_loop,
-            last_received_msg_timestamp,
+            dispatched_msg_counter,
         }
     }
 
@@ -136,7 +136,7 @@ where
         let (dispatcher, mailbox) = Mailbox::<<AF as ActorFactory>::Actor>::new(
             mailbox_preferences,
             self.handle.mailbox_cancellation(),
-            &self.last_received_msg_timestamp,
+            &self.dispatched_msg_counter,
         );
 
         self.handle

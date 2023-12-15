@@ -8,7 +8,7 @@ use virtual_actor::{Actor, AddrError, Message, MessageEnvelopeFactory, MessageHa
 
 use crate::{
     messaging::MessageDispatcher,
-    utils::{atomic_timestamp::AtomicTimestamp, GracefulShutdown},
+    utils::{atomic_counter::AtomicCounter, GracefulShutdown},
     utils::{
         notify_once::NotifyOnce,
         waiter::{waiter, WaitError},
@@ -45,10 +45,10 @@ struct ActorInner<A: Actor> {
     execution_cancellation: CancellationToken,
     /// Message receiving cancellation token
     mailbox_cancellation: CancellationToken,
-    /// Timestamp of last processed message
-    last_received_msg_timestamp: AtomicTimestamp,
-    /// Timestamp of last processed message
-    last_processed_msg_timestamp: AtomicTimestamp,
+    /// Counter of messages dispatched to actor
+    dispatched_msg_counter: AtomicCounter,
+    /// Counter of messages processed by actor
+    processed_msg_counter: AtomicCounter,
 }
 
 /// Actor handler
@@ -99,7 +99,7 @@ impl<A: Actor> ActorHandle<A> {
         dispatcher: Arc<OnceLock<MessageDispatcher<A>>>,
         execution_cancellation: CancellationToken,
         mailbox_cancellation: CancellationToken,
-        last_received_msg_timestamp: AtomicTimestamp,
+        dispatched_msg_counter: AtomicCounter,
     ) -> Self {
         Self {
             inner: Arc::new(ActorInner {
@@ -108,8 +108,8 @@ impl<A: Actor> ActorHandle<A> {
                 dispatcher_ready: Arc::new(Notify::new()),
                 execution_cancellation,
                 mailbox_cancellation,
-                last_received_msg_timestamp,
-                last_processed_msg_timestamp: AtomicTimestamp::new(),
+                dispatched_msg_counter,
+                processed_msg_counter: AtomicCounter::default(),
             }),
         }
     }
@@ -128,12 +128,12 @@ impl<A: Actor> ActorHandle<A> {
         }
     }
 
-    pub(crate) fn last_processed_msg_timestamp(&self) -> &AtomicTimestamp {
-        &self.inner.last_processed_msg_timestamp
+    pub(crate) fn processed_msg_counter(&self) -> &AtomicCounter {
+        &self.inner.processed_msg_counter
     }
 
-    pub(crate) fn last_received_msg_timestamp(&self) -> &AtomicTimestamp {
-        &self.inner.last_received_msg_timestamp
+    pub(crate) fn dispatched_msg_counter(&self) -> &AtomicCounter {
+        &self.inner.dispatched_msg_counter
     }
 
     /// Clone cancellation token
