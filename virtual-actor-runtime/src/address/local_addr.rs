@@ -1,12 +1,39 @@
 //! `ActorAddr` implementation
 
-use virtual_actor::{
-    Actor, ActorAddr, AddrError, Message, MessageEnvelopeFactory, MessageHandler, WeakActorRef,
-};
+use virtual_actor::{Actor, ActorAddr, Message, MessageEnvelopeFactory, MessageHandler};
 
-use super::actor_handle::{ActorHandle, WeakActorHandle};
+use crate::{GracefulShutdown, WaitError};
+
+use super::{actor_handle::ActorHandle, weak_local_addr::WeakLocalAddr};
+
+/// Actor handler error
+#[derive(thiserror::Error, Debug)]
+pub enum LocalAddrError {
+    /// Dispatcher not set
+    #[error("Actor not ready to receive messages")]
+    ActorNotReady,
+    /// Dispatcher not set
+    #[error("Actor stopped")]
+    Stopped,
+    /// Dispatcher error
+    #[error("Dispatch error {0}")]
+    DispatcherError(Box<dyn std::error::Error + Send + Sync>),
+}
+
+impl LocalAddrError {
+    /// Creates new `LocalAddrError::DispatcherError`
+    pub fn dispatcher_error<E>(e: E) -> Self
+    where
+        E: std::error::Error + Send + Sync + 'static,
+    {
+        Self::DispatcherError(Box::new(e))
+    }
+}
 
 /// Actor address
+///
+/// `LocalAddr` is a handle to an actor. It can be used to send messages to the actor.
+/// If dropped, the actor will be cancelled from receiving new messages and later stopped
 pub struct LocalAddr<A: Actor> {
     /// Actor handler
     handle: ActorHandle<A>,
@@ -19,20 +46,31 @@ impl<A: Actor> LocalAddr<A> {
             handle: handle.clone(),
         }
     }
+
+    /// Wait for dispatcher to be set
+    ///
+    /// # Errors
+    ///
+    /// Returns `WaitError::Timeout` if timeout is reached
+    /// Returns `WaitError::Cancelled` if cancellation token is cancelled
+    pub async fn wait_for_dispatcher(&self, timeout: std::time::Duration) -> Result<(), WaitError> {
+        self.handle.wait_for_dispatcher(timeout).await
+    }
 }
 
-impl<A: Actor> Clone for LocalAddr<A> {
-    fn clone(&self) -> Self {
-        Self {
-            handle: self.handle.clone(),
-        }
+impl<A: Actor> Drop for LocalAddr<A> {
+    fn drop(&mut self) {
+        // if all refs are dropped, we can cancel actor from receiving new messages
+        self.handle.mailbox_cancellation().cancel();
     }
 }
 
 impl<A: Actor> ActorAddr<A> for LocalAddr<A> {
-    type WeakRef = WeakRef<A>;
+    type Error = LocalAddrError;
 
-    async fn send<M>(&self, msg: M) -> Result<M::Result, AddrError>
+    type WeakRef = WeakLocalAddr<A>;
+
+    async fn send<M>(&self, msg: M) -> Result<M::Result, Self::Error>
     where
         M: Message,
         A: MessageHandler<M>,
@@ -41,7 +79,7 @@ impl<A: Actor> ActorAddr<A> for LocalAddr<A> {
         self.handle.send(msg).await
     }
 
-    fn dispatch<M>(&self, msg: M) -> Result<(), AddrError>
+    async fn dispatch<M>(&self, msg: M) -> Result<(), Self::Error>
     where
         M: Message,
         A: MessageHandler<M>,
@@ -51,37 +89,13 @@ impl<A: Actor> ActorAddr<A> for LocalAddr<A> {
     }
 
     fn weak_ref(&self) -> Self::WeakRef {
-        WeakRef {
-            weak_handle: self.handle.weak_ref(),
-        }
+        WeakLocalAddr::new(&self.handle)
     }
 }
 
-/// Weak actor address
-pub struct WeakRef<A: Actor> {
-    /// Actor weak handler
-    weak_handle: WeakActorHandle<A>,
-}
-
-impl<A: Actor> Clone for WeakRef<A> {
-    fn clone(&self) -> Self {
-        Self {
-            weak_handle: self.weak_handle.clone(),
-        }
-    }
-}
-
-impl<A: Actor> WeakActorRef<A, LocalAddr<A>> for WeakRef<A> {
-    fn upgrade(&self) -> Option<LocalAddr<A>> {
-        match self.weak_handle.upgrade() {
-            Some(handle) => {
-                if handle.is_cancelled() {
-                    None
-                } else {
-                    Some(LocalAddr::new(&handle))
-                }
-            }
-            None => None,
-        }
+impl<A: Actor> GracefulShutdown for LocalAddr<A> {
+    async fn graceful_shutdown(self, timeout: std::time::Duration) -> Result<(), WaitError> {
+        let graceful_shutdown_handle = self.handle.clone();
+        graceful_shutdown_handle.graceful_shutdown(timeout).await
     }
 }

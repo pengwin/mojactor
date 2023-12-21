@@ -1,17 +1,15 @@
-use std::{
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-    time::Duration,
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Weak,
 };
 
+use tokio::sync::Mutex;
 use virtual_actor::{
-    Actor, ActorAddr, ActorContext, ActorFactory, AddrError, VirtualActor, VirtualActorFactory,
+    Actor, ActorAddr, ActorContext, ActorFactory, VirtualActor, VirtualActorFactory,
 };
 
 use crate::{
-    address::ActorHandle,
+    address::{ActorHandle, LocalAddrError},
     context::ActorContextFactory,
     executor::{Handle, LocalExecutorError},
     runtime::runtime_preferences::RuntimePreferences,
@@ -19,11 +17,12 @@ use crate::{
 };
 
 use super::{
+    actors_cache::ActorsCache,
     housekeeping::{
         GarbageCollectActors, HousekeepingActor, HousekeepingActorFactory,
         HousekeepingContextFactory,
     },
-    virtual_actor_registration::{VirtualActorRegistration, VirtualActorSpawner}, actors_cache::ActorsCache,
+    virtual_actor_registration::{VirtualActorRegistration, VirtualActorSpawner},
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -31,7 +30,7 @@ pub enum StartHousekeepingError {
     #[error("WaitDispatcherError {0:?}")]
     WaitDispatcherError(#[from] WaitError),
     #[error("StartGarbageCollectError {0:?}")]
-    StartGarbageCollectError(#[from] AddrError),
+    StartGarbageCollectError(#[from] LocalAddrError),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -45,12 +44,28 @@ pub enum ActorSpawnError {
 }
 
 pub struct ActorActivator<A: VirtualActor> {
+    inner: Arc<Inner<A>>,
+}
+
+impl<A: VirtualActor> Clone for ActorActivator<A> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
+}
+
+pub struct Inner<A: VirtualActor> {
     registration: Box<dyn VirtualActorSpawner<A>>,
     cache: ActorsCache<A>,
-    housekeeping_actor: ActorHandle<HousekeepingActor<A>>,
+    housekeeping_actor: LocalAddr<HousekeepingActor<A>>,
     /// Indicates that housekeeping has started
     /// Housekeeping is lazy started when first actor is spawned
     house_keeping_started: Arc<AtomicBool>,
+    /// Housekeeping sync primitive, to prevent starting multiple garbage collection
+    housekeeping_lock: Arc<Mutex<bool>>,
+    /// Preferences
+    preferences: Arc<RuntimePreferences>,
 }
 
 impl<A: VirtualActor> ActorActivator<A> {
@@ -72,57 +87,96 @@ impl<A: VirtualActor> ActorActivator<A> {
         CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
     {
         let cache = ActorsCache::new();
-        let housekeeping_actor_factory = Arc::new(HousekeepingActorFactory::new(
-            cache.clone(),
-            Duration::from_millis(100),
-            preferences,
-        ));
+        let housekeeping_actor_factory =
+            Arc::new(HousekeepingActorFactory::new(cache.clone(), &preferences));
         let housekeeping_context_factory =
             Arc::new(HousekeepingContextFactory::<<AF as ActorFactory>::Actor>::default());
-        let housekeeping_actor = housekeeping_executor.spawn_local_actor_no_wait(
-            &housekeeping_actor_factory,
-            &housekeeping_context_factory,
-        )?;
+        let housekeeping_actor = housekeeping_executor
+            .spawn_local_actor_no_wait(&housekeeping_actor_factory, &housekeeping_context_factory)?
+            .addr();
         Ok(Self {
-            registration: Box::new(VirtualActorRegistration::new(
-                factory,
-                context_factory,
-                executor,
-            )),
-            cache,
-            housekeeping_actor,
-            house_keeping_started: Arc::new(AtomicBool::new(false)),
+            inner: Arc::new(Inner {
+                registration: Box::new(VirtualActorRegistration::new(
+                    factory,
+                    context_factory,
+                    executor,
+                )),
+                cache,
+                housekeeping_actor,
+                house_keeping_started: Arc::new(AtomicBool::new(false)),
+                housekeeping_lock: Arc::new(Mutex::new(false)),
+                preferences,
+            }),
         })
     }
 
-    pub async fn spawn(
-        &self,
-        id: A::ActorId,
-        wait_timeout: Duration,
-    ) -> Result<ActorHandle<A>, ActorSpawnError> {
-        if let Some(handle) = self.cache.get(&id) {
+    pub fn weak_ref(&self) -> WeakActorActivator<A> {
+        WeakActorActivator {
+            inner: Arc::downgrade(&self.inner),
+        }
+    }
+
+    pub async fn get_or_spawn(&self, id: &A::ActorId) -> Result<ActorHandle<A>, ActorSpawnError> {
+        if let Some(handle) = self.inner.cache.get(id) {
             return Ok(handle);
         }
         self.start_housekeeping().await?;
-        let handle = self.registration.spawn_no_wait(id.clone())?;
-        handle.wait_for_dispatcher(wait_timeout).await?;
-        self.cache.insert(id, handle.clone());
+        let handle = self.inner.registration.spawn_no_wait(id.clone())?;
+        handle
+            .wait_for_dispatcher(self.inner.preferences.actor_activation_timeout)
+            .await?;
+        self.inner.cache.insert(id.clone(), handle.clone());
         Ok(handle)
     }
 
     async fn start_housekeeping(&self) -> Result<(), StartHousekeepingError> {
-        if self.house_keeping_started.load(Ordering::Relaxed) {
+        if self.inner.house_keeping_started.load(Ordering::Relaxed) {
             return Ok(());
         }
-        self.housekeeping_actor
-            .wait_for_dispatcher(Duration::from_millis(100))
+
+        let mut lock = self.inner.housekeeping_lock.lock().await;
+
+        // double check
+        if *lock {
+            return Ok(());
+        }
+
+        self.inner
+            .housekeeping_actor
+            .wait_for_dispatcher(self.inner.preferences.actor_activation_timeout)
             .await?;
 
-        let addr = self.housekeeping_actor.addr();
-        addr.dispatch(GarbageCollectActors)?;
+        self.inner
+            .housekeeping_actor
+            .dispatch(GarbageCollectActors)
+            .await?;
 
-        self.house_keeping_started.store(true, Ordering::Relaxed);
+        self.inner
+            .house_keeping_started
+            .store(true, Ordering::Relaxed);
+
+        *lock = true;
+        drop(lock);
 
         Ok(())
+    }
+}
+
+pub struct WeakActorActivator<A: VirtualActor> {
+    inner: Weak<Inner<A>>,
+}
+
+impl<A: VirtualActor> Clone for WeakActorActivator<A> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
+}
+
+impl<A: VirtualActor> WeakActorActivator<A> {
+    pub fn upgrade(&self) -> Option<ActorActivator<A>> {
+        let inner = self.inner.upgrade()?;
+        Some(ActorActivator { inner })
     }
 }

@@ -37,10 +37,12 @@ impl MessageHandler<VirtualPing> for VirtualPingActor {
         ctx: &Self::ActorContext,
     ) -> <VirtualPing as Message>::Result {
         let addr = ctx
-            .get_or_create::<VirtualPongActor>(self.id)
+            .get_or_create::<VirtualPongActor>(&self.id)
             .await
             .map_err(|err| err.to_string())?;
-        addr.dispatch(VirtualPong).map_err(|err| err.to_string())?;
+        addr.dispatch(VirtualPong)
+            .await
+            .map_err(|err| err.to_string())?;
         self.counter += 1;
         Ok(())
     }

@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use virtual_actor::{Actor, VirtualActor};
 
-use crate::{address::ActorHandle, context::ActorContextFactory, LocalAddr};
+use crate::{address::ActorHandle, context::ActorContextFactory, WeakLocalAddr};
 
 use super::{context::HousekeepingContext, HousekeepingActor};
 
@@ -22,7 +22,7 @@ impl<A: VirtualActor> ActorContextFactory<HousekeepingActor<A>> for Housekeeping
         handle: &ActorHandle<HousekeepingActor<A>>,
     ) -> <HousekeepingActor<A> as Actor>::ActorContext {
         HousekeepingContext {
-            addr: LocalAddr::new(handle),
+            weak_addr: WeakLocalAddr::new(handle),
         }
     }
 }

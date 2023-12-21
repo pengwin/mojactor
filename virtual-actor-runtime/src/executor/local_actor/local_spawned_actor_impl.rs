@@ -3,10 +3,9 @@
 use std::{any::Any, panic::AssertUnwindSafe, sync::Arc};
 
 use super::actor_loop::ActorLoop;
+use super::ActorSpawnError;
+use crate::address::ActorTask;
 use crate::context::ActorContextFactory;
-use crate::executor::actor_tasks_registry::{
-    ActorTaskJoinHandle, ActorTasksRegistry, SpawnedActorId,
-};
 use crate::utils::atomic_counter::AtomicCounter;
 use crate::utils::notify_once::NotifyOnce;
 use crate::{address::ActorHandle, address::LocalAddr};
@@ -26,7 +25,6 @@ where
     CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
     AL: ActorLoop<AF, CF> + 'static,
 {
-    id: SpawnedActorId,
     /// Actor factory
     actor_factory: Arc<AF>,
     /// Actor context factory
@@ -49,7 +47,6 @@ where
 {
     /// Creates new local actor
     pub fn new(
-        id: SpawnedActorId,
         actor_factory: &Arc<AF>,
         context_factory: &Arc<CF>,
         handle: &ActorHandle<<AF as ActorFactory>::Actor>,
@@ -66,7 +63,6 @@ where
         AL: ActorLoop<AF, CF> + 'static,
     {
         Self {
-            id,
             actor_factory: actor_factory.clone(),
             context_factory: context_factory.clone(),
             handle: handle.clone(),
@@ -87,28 +83,17 @@ where
         }
     }
 
-    fn finish_actor(
-        result: &Result<(), ActorTaskError>,
-        id: &SpawnedActorId,
-        registry: &ActorTasksRegistry,
-        notify: &NotifyOnce,
-    ) {
+    fn finish_actor(result: &Result<(), ActorTaskError>, notify: &NotifyOnce) {
         if let Err(e) = result {
             eprintln!("Actor task error: {e:?}");
         }
         notify.notify();
-        registry.unregister_actor(id);
     }
 
-    fn spawn_actor(
-        &self,
-        mailbox: Mailbox<<AF as ActorFactory>::Actor>,
-        registry: Arc<ActorTasksRegistry>,
-    ) -> ActorTaskJoinHandle {
+    fn spawn_actor(&self, mailbox: Mailbox<<AF as ActorFactory>::Actor>) -> ActorTask {
         let handle = self.handle.clone();
         let stop_notify = handle.stop_notify().clone();
         let actor_loop = self.actor_loop.clone();
-        let id = self.id;
         tokio::task::spawn_local(
             AssertUnwindSafe(actor_loop.actor_loop(
                 mailbox,
@@ -118,7 +103,7 @@ where
             ))
             .catch_unwind()
             .map(Self::unwind_panic)
-            .inspect(move |x| Self::finish_actor(x, &id, &registry, &stop_notify)),
+            .inspect(move |x| Self::finish_actor(x, &stop_notify)),
         )
     }
 }
@@ -131,7 +116,7 @@ where
     CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
     AL: ActorLoop<AF, CF> + 'static,
 {
-    fn spawn(&self, registry: Arc<ActorTasksRegistry>) -> ActorTaskJoinHandle {
+    fn spawn(&self) -> Result<(), ActorSpawnError> {
         let mailbox_preferences = self.actor_factory.mailbox_preferences();
         let (dispatcher, mailbox) = Mailbox::<<AF as ActorFactory>::Actor>::new(
             mailbox_preferences,
@@ -141,12 +126,14 @@ where
 
         self.handle
             .set_dispatcher(dispatcher)
-            .expect("Dispatcher already set");
+            .map_err(ActorSpawnError::DispatcherAlreadySet)?;
 
-        self.spawn_actor(mailbox, registry)
-    }
+        let task = self.spawn_actor(mailbox);
 
-    fn id(&self) -> SpawnedActorId {
-        self.id
+        self.handle
+            .set_task(task)
+            .map_err(ActorSpawnError::ActorTaskAlreadySet)?;
+
+        Ok(())
     }
 }

@@ -3,19 +3,20 @@
 use std::sync::Arc;
 
 use tokio_util::sync::CancellationToken;
-use virtual_actor::{Actor, ActorContext, VirtualActor};
+use virtual_actor::{Actor, ActorAddr, ActorContext, VirtualActor};
 
 use crate::{
-    address::LocalAddr,
+    address::{LocalAddr, VirtualAddr},
     runtime::{ActivateActorError, ActorRegistry},
+    WeakLocalAddr,
 };
 
 use super::cancellation_token_wrapper::CancellationTokenWrapper;
 
 /// Runtime context for actor.
 pub struct RuntimeContext<A: Actor> {
-    /// Actor address
-    self_addr: LocalAddr<A>,
+    /// Actor weak address
+    self_addr_weak: WeakLocalAddr<A>,
     /// Cancellation token
     cancellation_token: CancellationTokenWrapper,
     /// Mailbox cancellation token
@@ -27,12 +28,12 @@ pub struct RuntimeContext<A: Actor> {
 impl<A: Actor> RuntimeContext<A> {
     pub(crate) fn new(
         registry: Arc<ActorRegistry>,
-        self_addr: LocalAddr<A>,
+        self_addr_weak: WeakLocalAddr<A>,
         mailbox_cancellation_token: &CancellationToken,
         cancellation_token: &CancellationToken,
     ) -> Self {
         Self {
-            self_addr,
+            self_addr_weak,
             mailbox_cancellation_token: mailbox_cancellation_token.clone(),
             cancellation_token: CancellationTokenWrapper::new(cancellation_token.clone()),
             registry,
@@ -44,11 +45,12 @@ impl<A: Actor> RuntimeContext<A> {
     /// # Errors
     ///
     /// Returns error if actor cannot be activated
+    #[allow(clippy::unused_async)]
     pub async fn get_or_create<VA: VirtualActor>(
         &self,
-        id: VA::ActorId,
-    ) -> Result<LocalAddr<VA>, ActivateActorError> {
-        self.registry.get_or_create(id).await
+        id: &VA::ActorId,
+    ) -> Result<VirtualAddr<VA>, ActivateActorError> {
+        self.registry.get_or_create(id)
     }
 }
 
@@ -58,7 +60,7 @@ where
 {
     fn clone(&self) -> Self {
         Self {
-            self_addr: self.self_addr.clone(),
+            self_addr_weak: self.self_addr_weak.clone(),
             mailbox_cancellation_token: self.mailbox_cancellation_token.clone(),
             cancellation_token: self.cancellation_token.clone(),
             registry: self.registry.clone(),
@@ -70,8 +72,8 @@ impl<A: Actor> ActorContext<A> for RuntimeContext<A> {
     type Addr = LocalAddr<A>;
     type CancellationToken = CancellationTokenWrapper;
 
-    fn self_addr(&self) -> &Self::Addr {
-        &self.self_addr
+    fn self_addr(&self) -> &<Self::Addr as ActorAddr<A>>::WeakRef {
+        &self.self_addr_weak
     }
 
     fn stop(&self) {

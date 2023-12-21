@@ -15,3 +15,13 @@ pub enum ActorTaskError {
     #[error("Cancelled")]
     Cancelled,
 }
+
+#[derive(Debug, thiserror::Error)]
+pub enum ActorSpawnError {
+    /// Dispatcher already set
+    #[error("Dispatcher already set {0}")]
+    DispatcherAlreadySet(&'static str),
+    /// Actor task already set
+    #[error("Actor task already set {0}")]
+    ActorTaskAlreadySet(&'static str),
+}

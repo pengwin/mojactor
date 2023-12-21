@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
 use dashmap::DashMap;
 use virtual_actor::{
@@ -6,6 +6,7 @@ use virtual_actor::{
 };
 
 use crate::{
+    address::VirtualAddr,
     context::ActorContextFactory,
     executor::{LocalExecutor, LocalExecutorError},
     runtime::runtime_preferences::RuntimePreferences,
@@ -73,10 +74,10 @@ impl ActorRegistry {
     }
 
     /// Gets or creates virtual actor
-    pub async fn get_or_create<A: VirtualActor>(
+    pub fn get_or_create<A: VirtualActor>(
         &self,
-        id: A::ActorId,
-    ) -> Result<LocalAddr<A>, ActivateActorError> {
+        id: &A::ActorId,
+    ) -> Result<VirtualAddr<A>, ActivateActorError> {
         let name = A::name();
         let activator = self
             .activators
@@ -85,7 +86,8 @@ impl ActorRegistry {
         let activator = activator
             .downcast_ref::<ActorActivator<A>>()
             .ok_or(ActivateActorError::UnexpectedActivator(name))?;
-        let handle = activator.spawn(id, Duration::from_secs(1)).await?;
-        Ok(handle.addr())
+
+        let addr = VirtualAddr::new(id, activator);
+        Ok(addr)
     }
 }

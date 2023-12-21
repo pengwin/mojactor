@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use dashmap::{DashMap, mapref::multiple::RefMulti};
+use dashmap::{mapref::multiple::RefMulti, DashMap};
 use virtual_actor::VirtualActor;
 
 use crate::address::ActorHandle;
@@ -30,7 +30,9 @@ impl<A: VirtualActor> ActorsCache<A> {
         self.cache.remove(actor_id).map(|kv| kv.1)
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = RefMulti<'_, <A as VirtualActor>::ActorId, ActorHandle<A>>> {
+    pub fn iter(
+        &self,
+    ) -> impl Iterator<Item = RefMulti<'_, <A as VirtualActor>::ActorId, ActorHandle<A>>> {
         self.cache.iter()
     }
 }

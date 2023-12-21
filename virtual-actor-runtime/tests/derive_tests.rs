@@ -1,5 +1,6 @@
 use serde::Deserialize;
 use serde::Serialize;
+use virtual_actor::ActorAddr;
 use virtual_actor::MessageHandler;
 use virtual_actor_runtime::LocalAddr;
 
@@ -57,7 +58,7 @@ struct TestContext;
 impl virtual_actor::ActorContext<TestActorWithContext> for TestContext {
     type Addr = LocalAddr<TestActorWithContext>;
 
-    fn self_addr(&self) -> &Self::Addr {
+    fn self_addr(&self) -> &<Self::Addr as ActorAddr<TestActorWithContext>>::WeakRef {
         todo!()
     }
 

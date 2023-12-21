@@ -10,7 +10,7 @@ pub trait ActorContext<A: Actor>: Clone {
     type CancellationToken: CancellationToken;
 
     /// Returns actor reference
-    fn self_addr(&self) -> &Self::Addr;
+    fn self_addr(&self) -> &<Self::Addr as ActorAddr<A>>::WeakRef;
 
     /// Send stop signal to actor
     fn stop(&self);

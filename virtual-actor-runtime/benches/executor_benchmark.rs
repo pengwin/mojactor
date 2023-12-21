@@ -42,10 +42,8 @@ pub fn messaging_benchmark(c: &mut Criterion) -> Result<(), Box<dyn std::error::
 
     let actor_factory = Arc::new(BenchActorFactory {});
 
-    let actor = benchmark_runtime
+    let addr = benchmark_runtime
         .block_on(async { runtime.spawn_local(&actor_factory, &executor).await })?;
-
-    let addr = actor.addr();
 
     c.bench_function("send_wait", |b| {
         b.to_async(&benchmark_runtime).iter(|| async {
@@ -77,19 +75,14 @@ pub fn inter_thread_messaging_benchmark(
 
     let actor_factory = Arc::new(BenchActorFactory {});
 
-    let actor_1_1 = benchmark_runtime
+    let addr_1_1 = benchmark_runtime
         .block_on(async { runtime.spawn_local(&actor_factory, &executor_1).await })?;
 
-    let actor_1_2 = benchmark_runtime
+    let addr_1_2 = benchmark_runtime
         .block_on(async { runtime.spawn_local(&actor_factory, &executor_1).await })?;
 
-    let actor_2_2 = benchmark_runtime
+    let addr_2_2 = benchmark_runtime
         .block_on(async { runtime.spawn_local(&actor_factory, &executor_2).await })?;
-
-    let addr_1_1 = actor_1_1.addr();
-    let addr_1_2 = actor_1_2.addr();
-
-    let addr_2_2 = actor_2_2.addr();
 
     c.bench_function("single thread communication", |b| {
         b.to_async(&benchmark_runtime).iter(|| async {
@@ -119,16 +112,16 @@ criterion_main!(benches);
 
 /// This module contains the actor and actor factory used for the benchmark.
 mod bench_actor {
-    use virtual_actor_runtime::{prelude::*, WeakRef};
+    use virtual_actor_runtime::{prelude::*, WeakLocalAddr};
 
     #[derive(Message)]
     #[result(())]
     pub struct AksMessage {
-        recipient: WeakRef<BenchActor>,
+        recipient: WeakLocalAddr<BenchActor>,
     }
 
     impl AksMessage {
-        pub fn new(recipient: WeakRef<BenchActor>) -> Self {
+        pub fn new(recipient: WeakLocalAddr<BenchActor>) -> Self {
             Self { recipient }
         }
     }

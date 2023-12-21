@@ -22,10 +22,9 @@ mod tests {
     use std::{cell::RefCell, rc::Rc};
 
     use crate::{
-        actor_addr::{ActorAddr, AddrError},
-        responder_trait::ResponderError,
-        Actor, ActorContext, CancellationToken, Message, MessageEnvelope, MessageEnvelopeFactory,
-        Responder, WeakActorRef,
+        actor_addr::ActorAddr, responder_trait::ResponderError, Actor, ActorContext,
+        CancellationToken, Message, MessageEnvelope, MessageEnvelopeFactory, Responder,
+        WeakActorAddr,
     };
 
     use super::MessageHandler;
@@ -129,18 +128,22 @@ mod tests {
     struct TestAddr;
 
     impl ActorAddr<TestActor> for TestAddr {
+        type Error = std::io::Error;
         type WeakRef = WeakRef;
 
-        async fn send<M>(&self, _msg: M) -> Result<M::Result, AddrError>
+        async fn send<M>(&self, _msg: M) -> Result<M::Result, Self::Error>
         where
             M: Message,
             TestActor: MessageHandler<M>,
             TestMessagesEnvelope: MessageEnvelopeFactory<TestActor, M>,
         {
-            Err(AddrError::ActorNotReady)
+            Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "Not implemented",
+            ))
         }
 
-        fn dispatch<M>(&self, _msg: M) -> Result<(), AddrError>
+        async fn dispatch<M>(&self, _msg: M) -> Result<(), Self::Error>
         where
             M: Message,
             TestActor: MessageHandler<M>,
@@ -157,7 +160,9 @@ mod tests {
     #[derive(Clone)]
     struct WeakRef;
 
-    impl WeakActorRef<TestActor, TestAddr> for WeakRef {
+    impl WeakActorAddr<TestActor> for WeakRef {
+        type Upgraded = TestAddr;
+
         fn upgrade(&self) -> Option<TestAddr> {
             todo!()
         }
@@ -178,8 +183,8 @@ mod tests {
         type Addr = TestAddr;
         type CancellationToken = TestCancellationToken;
 
-        fn self_addr(&self) -> &Self::Addr {
-            &TestAddr
+        fn self_addr(&self) -> &<Self::Addr as ActorAddr<TestActor>>::WeakRef {
+            &WeakRef
         }
 
         fn stop(&self) {

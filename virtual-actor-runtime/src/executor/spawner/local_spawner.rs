@@ -7,7 +7,7 @@ use tokio::sync::Notify;
 use tokio_util::sync::CancellationToken;
 use virtual_actor::MailboxPreferences;
 
-use crate::{executor::actor_tasks_registry::ActorTasksRegistry, utils::GracefulShutdownHandle};
+use crate::utils::GracefulShutdownHandle;
 
 use super::{mailbox::Mailbox, SpawnerDispatcher};
 
@@ -19,14 +19,11 @@ pub struct LocalSpawner {
     cancellation_token: CancellationToken,
     /// Notify when spawn loop is stopped
     stopped_notify: Arc<Notify>,
-    /// Actors
-    actors: Arc<ActorTasksRegistry>,
 }
 
 impl LocalSpawner {
     /// Creates new `LocalSpawner`
     pub fn new(
-        actors: &Arc<ActorTasksRegistry>,
         mailbox_preferences: &MailboxPreferences,
         mailbox_cancellation: &CancellationToken,
         cancellation_token: &CancellationToken,
@@ -38,7 +35,6 @@ impl LocalSpawner {
             dispatcher,
             cancellation_token: cancellation_token.clone(),
             stopped_notify,
-            actors: actors.clone(),
         }
     }
 
@@ -66,8 +62,9 @@ impl LocalSpawner {
 
     async fn inner_loop(&mut self) {
         while let Some(new_actor) = self.mailbox.recv(&self.cancellation_token).await {
-            let spawned_actor = new_actor.spawn(self.actors.clone());
-            self.actors.register_actor(new_actor.id(), spawned_actor);
+            if let Err(e) = new_actor.spawn() {
+                eprintln!("Failed to spawn actor: {e:?}");
+            }
         }
     }
 }

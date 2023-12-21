@@ -45,8 +45,8 @@ async fn test_local_executor_actor_threads_id() -> Result<(), Box<dyn std::error
 
     let current_thread_id = std::thread::current().id();
 
-    let actor_one_thread_id = actor_one.addr().send(GetThreadId).await?;
-    let actor_two_thread_id = actor_two.addr().send(GetThreadId).await?;
+    let actor_one_thread_id = actor_one.send(GetThreadId).await?;
+    let actor_two_thread_id = actor_two.send(GetThreadId).await?;
 
     assert_ne!(
         current_thread_id, actor_one_thread_id,
@@ -78,8 +78,8 @@ async fn test_local_executors_threads_id() -> Result<(), Box<dyn std::error::Err
 
     let current_thread_id = std::thread::current().id();
 
-    let actor_one_thread_id = actor_one.addr().send(GetThreadId).await?;
-    let actor_two_thread_id = actor_two.addr().send(GetThreadId).await?;
+    let actor_one_thread_id = actor_one.send(GetThreadId).await?;
+    let actor_two_thread_id = actor_two.send(GetThreadId).await?;
 
     assert_ne!(
         current_thread_id, actor_one_thread_id,

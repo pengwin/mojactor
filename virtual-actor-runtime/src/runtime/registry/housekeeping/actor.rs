@@ -1,8 +1,10 @@
-use std::time::Duration;
+use std::sync::Arc;
 
 use virtual_actor::{Actor, LocalActor, MessageHandler, VirtualActor};
 
-use crate::runtime::registry::actors_cache::ActorsCache;
+use crate::runtime::{
+    registry::actors_cache::ActorsCache, runtime_preferences::RuntimePreferences,
+};
 
 use super::{
     actor_counters_map::ActorCountersMap, context::HousekeepingContext,
@@ -11,8 +13,7 @@ use super::{
 
 pub struct HousekeepingActor<A: VirtualActor> {
     pub(super) cache: ActorsCache<A>,
-    pub(super) interval: Duration,
-    pub(super) actor_idle_timeout: Duration,
+    pub(super) preferences: Arc<RuntimePreferences>,
     pub(super) actor_counters: ActorCountersMap<A>,
 }
 

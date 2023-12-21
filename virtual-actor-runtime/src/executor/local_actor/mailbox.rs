@@ -21,8 +21,7 @@ impl<A: Actor> Mailbox<A> {
         dispatched_msg_counter: &AtomicCounter,
     ) -> (MessageDispatcher<A>, Self) {
         let (mailbox_sender, inner) = BaseMailbox::new(preferences, mailbox_cancellation);
-        let dispatcher =
-            MessageDispatcher::new(mailbox_sender, dispatched_msg_counter.clone());
+        let dispatcher = MessageDispatcher::new(mailbox_sender, dispatched_msg_counter.clone());
         (dispatcher, Self { inner })
     }
 

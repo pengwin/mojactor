@@ -1,6 +1,5 @@
 //! Local executor implementation
 
-mod actor_tasks_registry;
 mod error;
 mod executor_preferences;
 mod handle;
@@ -13,4 +12,5 @@ pub use error::LocalExecutorError;
 pub use executor_preferences::ExecutorPreferences;
 pub use executor_preferences::TokioRuntimePreferences;
 pub use handle::Handle;
+pub use local_actor::ActorTaskError;
 pub use local_executor::LocalExecutor;

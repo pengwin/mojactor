@@ -28,6 +28,8 @@ use crate::{
     },
 };
 
+const SHUTDOWN_TIMEOUT: Duration = Duration::from_millis(1000);
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //test_qwe().await?;
@@ -54,10 +56,9 @@ async fn bench_spawn_wait_shutdown() -> Result<(), Box<dyn std::error::Error>> {
     let num_iteration = 10_000;
     let start = Instant::now();
     for _ in 0..num_iteration {
-        let actor = runtime.spawn_local(&actor_factory, &executor).await?;
-        let addr = actor.addr();
+        let addr = runtime.spawn_local(&actor_factory, &executor).await?;
         let _res = addr.send(HelloMessage::new("world")).await??;
-        actor.graceful_shutdown(Duration::from_millis(100)).await?;
+        addr.graceful_shutdown(SHUTDOWN_TIMEOUT).await?;
     }
     let elapsed = start.elapsed();
     println!("Elapsed: {elapsed:.2?}");
@@ -66,9 +67,7 @@ async fn bench_spawn_wait_shutdown() -> Result<(), Box<dyn std::error::Error>> {
         elapsed = elapsed / num_iteration
     );
 
-    runtime
-        .graceful_shutdown(Duration::from_millis(100))
-        .await?;
+    runtime.graceful_shutdown(SHUTDOWN_TIMEOUT).await?;
 
     Ok(())
 }
@@ -81,9 +80,7 @@ async fn bench_send_wait() -> Result<(), Box<dyn std::error::Error>> {
     let mut runtime = Runtime::new()?;
     let executor = runtime.create_executor()?;
 
-    let actor = runtime.spawn_local(&actor_factory, &executor).await?;
-
-    let addr = actor.addr();
+    let addr = runtime.spawn_local(&actor_factory, &executor).await?;
 
     let num_iteration = 10_000;
     let start = Instant::now();
@@ -97,9 +94,7 @@ async fn bench_send_wait() -> Result<(), Box<dyn std::error::Error>> {
         elapsed = elapsed / num_iteration
     );
 
-    runtime
-        .graceful_shutdown(Duration::from_millis(100))
-        .await?;
+    runtime.graceful_shutdown(SHUTDOWN_TIMEOUT).await?;
 
     Ok(())
 }
@@ -113,12 +108,8 @@ async fn bench_same_thread_ping_pong() -> Result<(), Box<dyn std::error::Error>>
     let mut runtime = Runtime::new()?;
     let executor = runtime.create_executor()?;
 
-    let ping = runtime.spawn_local(&actor_factory, &executor).await?;
-
-    let pong = runtime.spawn_local(&actor_factory, &executor).await?;
-
-    let ping_addr = ping.addr();
-    let pong_addr = pong.addr();
+    let ping_addr = runtime.spawn_local(&actor_factory, &executor).await?;
+    let pong_addr = runtime.spawn_local(&actor_factory, &executor).await?;
 
     ping_addr.send(Ping::new(pong_addr.weak_ref())).await?;
     pong_addr.send(Ping::new(ping_addr.weak_ref())).await?;
@@ -135,9 +126,7 @@ async fn bench_same_thread_ping_pong() -> Result<(), Box<dyn std::error::Error>>
     println!("Ping counter: {ping_counter} Average time for message {ping_duration:.2?}");
     println!("Pong counter: {pong_counter} Average time for message {pong_duration:.2?}");
 
-    runtime
-        .graceful_shutdown(Duration::from_millis(100))
-        .await?;
+    runtime.graceful_shutdown(SHUTDOWN_TIMEOUT).await?;
 
     Ok(())
 }
@@ -155,12 +144,8 @@ async fn bench_2_executors_ping_pong() -> Result<(), Box<dyn std::error::Error>>
 
     let runtime = Runtime::new()?;
 
-    let ping = runtime.spawn_local(&actor_factory, &executor_ping).await?;
-
-    let pong = runtime.spawn_local(&actor_factory, &executor_pong).await?;
-
-    let ping_addr = ping.addr();
-    let pong_addr = pong.addr();
+    let ping_addr = runtime.spawn_local(&actor_factory, &executor_ping).await?;
+    let pong_addr = runtime.spawn_local(&actor_factory, &executor_pong).await?;
 
     ping_addr.send(Ping::new(pong_addr.weak_ref())).await?;
     pong_addr.send(Ping::new(ping_addr.weak_ref())).await?;
@@ -177,7 +162,7 @@ async fn bench_2_executors_ping_pong() -> Result<(), Box<dyn std::error::Error>>
     println!("Ping counter: {ping_counter} Average time for message {ping_duration:.2?}");
     println!("Pong counter: {pong_counter} Average time for message {pong_duration:.2?}");
 
-    let timeout = Duration::from_millis(100);
+    let timeout = SHUTDOWN_TIMEOUT;
     runtime.graceful_shutdown(timeout).await?;
 
     Ok(())
@@ -191,18 +176,14 @@ async fn bench_infinite_loop_pending() -> Result<(), Box<dyn std::error::Error>>
     let mut runtime = Runtime::new()?;
     let executor = runtime.create_executor()?;
 
-    let actor = runtime.spawn_local(&actor_factory, &executor).await?;
+    let addr = runtime.spawn_local(&actor_factory, &executor).await?;
 
-    let addr = actor.addr();
-
-    addr.dispatch(PendingTask)?;
+    addr.dispatch(PendingTask).await?;
 
     let duration = Duration::from_millis(10);
     tokio::time::sleep(duration).await;
 
-    runtime
-        .graceful_shutdown(Duration::from_millis(100))
-        .await?;
+    runtime.graceful_shutdown(SHUTDOWN_TIMEOUT).await?;
 
     Ok(())
 }
@@ -218,7 +199,7 @@ async fn bench_virtual_actor_spawn_send_wait() -> Result<(), Box<dyn std::error:
     let num_iteration: u32 = 10_000;
     let start = Instant::now();
     for id in 0..num_iteration {
-        let addr = runtime.spawn_virtual::<HelloVirtualActor>(id).await?;
+        let addr = runtime.spawn_virtual::<HelloVirtualActor>(&id).await?;
         let _res = addr.send(HelloVirtualMessage::new("world")).await??;
     }
     let elapsed = start.elapsed();
@@ -230,9 +211,7 @@ async fn bench_virtual_actor_spawn_send_wait() -> Result<(), Box<dyn std::error:
 
     tokio::time::sleep(Duration::from_secs(10)).await;
 
-    runtime
-        .graceful_shutdown(Duration::from_millis(100))
-        .await?;
+    runtime.graceful_shutdown(SHUTDOWN_TIMEOUT).await?;
 
     Ok(())
 }
@@ -251,7 +230,7 @@ async fn bench_virtual_ping_pong() -> Result<(), Box<dyn std::error::Error>> {
     let id = 42;
     let start = Instant::now();
     for _ in 0..num_iteration {
-        let addr = runtime.spawn_virtual::<VirtualPingActor>(id).await?;
+        let addr = runtime.spawn_virtual::<VirtualPingActor>(&id).await?;
         addr.send(VirtualPing).await??;
     }
     let elapsed = start.elapsed();
@@ -261,21 +240,19 @@ async fn bench_virtual_ping_pong() -> Result<(), Box<dyn std::error::Error>> {
         elapsed = elapsed / num_iteration
     );
 
-    let ping_addr = runtime.spawn_virtual::<VirtualPingActor>(id).await?;
+    let ping_addr = runtime.spawn_virtual::<VirtualPingActor>(&id).await?;
     let ping_counter = ping_addr.send(VirtualGetCounter).await?;
     let ping_duration = elapsed / ping_counter as u32;
 
     println!("Ping counter: {ping_counter} Average time for message {ping_duration:.2?}");
 
-    let pong_addr = runtime.spawn_virtual::<VirtualPongActor>(id).await?;
+    let pong_addr = runtime.spawn_virtual::<VirtualPongActor>(&id).await?;
     let pong_counter = pong_addr.send(VirtualGetCounter).await?;
     let pong_duration = elapsed / pong_counter as u32;
 
     println!("Pong counter: {pong_counter} Average time for message {pong_duration:.2?}");
 
-    runtime
-        .graceful_shutdown(Duration::from_millis(100))
-        .await?;
+    runtime.graceful_shutdown(SHUTDOWN_TIMEOUT).await?;
 
     Ok(())
 }
@@ -289,16 +266,14 @@ async fn bench_infinite_loop_thread_sleep() -> Result<(), Box<dyn std::error::Er
     let mut runtime = Runtime::new()?;
     let executor = runtime.create_executor()?;
 
-    let actor = runtime.spawn_local(&actor_factory, &executor).await?;
+    let addr = runtime.spawn_local(&actor_factory, &executor).await?;
 
-    let addr = actor.addr();
-
-    addr.dispatch(ThreadSleepTask)?;
+    addr.dispatch(ThreadSleepTask).await?;
 
     let duration = Duration::from_millis(10);
     tokio::time::sleep(duration).await;
 
-    match runtime.graceful_shutdown(Duration::from_millis(100)).await {
+    match runtime.graceful_shutdown(SHUTDOWN_TIMEOUT).await {
         Err(WaitError::Timeout(s)) => {
             if s != "LocalSpawner" {
                 return Err(WaitError::Timeout(s).into());
@@ -326,7 +301,7 @@ async fn test_qwe() -> Result<(), Box<dyn std::error::Error>> {
     let num_iteration: u32 = 10_000;
     let start = Instant::now();
     let id = 42;
-    let addr = runtime.spawn_virtual::<HelloVirtualActor>(id).await?;
+    let addr = runtime.spawn_virtual::<HelloVirtualActor>(&id).await?;
 
     let mut line = reader.next().await.transpose()?;
     while let Some(l) = line {
@@ -347,9 +322,7 @@ async fn test_qwe() -> Result<(), Box<dyn std::error::Error>> {
 
     tokio::time::sleep(Duration::from_secs(10)).await;
 
-    runtime
-        .graceful_shutdown(Duration::from_millis(100))
-        .await?;
+    runtime.graceful_shutdown(SHUTDOWN_TIMEOUT).await?;
 
     Ok(())
 }

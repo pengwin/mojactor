@@ -25,7 +25,7 @@ mod virtual_message_trait;
 pub use uuid::Uuid;
 
 // Export actor traits
-pub use actor_addr::{ActorAddr, AddrError, WeakActorRef};
+pub use actor_addr::{ActorAddr, WeakActorAddr};
 pub use actor_context_trait::ActorContext;
 pub use actor_factory_trait::ActorFactory;
 pub use actor_trait::Actor;

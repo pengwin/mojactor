@@ -4,9 +4,10 @@ use std::sync::{Arc, OnceLock, Weak};
 
 use tokio::{select, sync::Notify};
 use tokio_util::sync::CancellationToken;
-use virtual_actor::{Actor, AddrError, Message, MessageEnvelopeFactory, MessageHandler};
+use virtual_actor::{Actor, Message, MessageEnvelopeFactory, MessageHandler};
 
 use crate::{
+    executor::ActorTaskError,
     messaging::MessageDispatcher,
     utils::{atomic_counter::AtomicCounter, GracefulShutdown},
     utils::{
@@ -15,6 +16,11 @@ use crate::{
     },
     LocalAddr,
 };
+
+use super::local_addr::LocalAddrError;
+
+pub type ActorTask = tokio::task::JoinHandle<Result<(), ActorTaskError>>;
+pub type ActorTaskContainer = Arc<OnceLock<ActorTask>>;
 
 pub struct WeakActorHandle<A: Actor> {
     inner: Weak<ActorInner<A>>,
@@ -49,6 +55,8 @@ struct ActorInner<A: Actor> {
     dispatched_msg_counter: AtomicCounter,
     /// Counter of messages processed by actor
     processed_msg_counter: AtomicCounter,
+    /// Actor task
+    actor_task: ActorTaskContainer,
 }
 
 /// Actor handler
@@ -110,6 +118,7 @@ impl<A: Actor> ActorHandle<A> {
                 mailbox_cancellation,
                 dispatched_msg_counter,
                 processed_msg_counter: AtomicCounter::default(),
+                actor_task: Arc::new(OnceLock::new()),
             }),
         }
     }
@@ -125,6 +134,17 @@ impl<A: Actor> ActorHandle<A> {
                 Ok(())
             }
             Err(_) => Err("Dispatcher already set"),
+        }
+    }
+
+    /// Set actor task
+    pub(crate) fn set_task(&self, task: ActorTask) -> Result<(), &'static str> {
+        match self.inner.actor_task.set(task) {
+            Ok(()) => {
+                // TODO: notify task started
+                Ok(())
+            }
+            Err(_) => Err("Actor task already set"),
         }
     }
 
@@ -168,52 +188,52 @@ impl<A: Actor> ActorHandle<A> {
     }
 
     /// Impl for trait
-    pub async fn send<M>(&self, msg: M) -> Result<M::Result, AddrError>
+    pub async fn send<M>(&self, msg: M) -> Result<M::Result, LocalAddrError>
     where
         M: Message,
         A: MessageHandler<M>,
         <A as Actor>::MessagesEnvelope: MessageEnvelopeFactory<A, M>,
     {
         if self.is_finished() {
-            return Err(AddrError::Stopped);
+            return Err(LocalAddrError::Stopped);
         }
         let dispatcher = self
             .inner
             .dispatcher
             .get()
-            .ok_or(AddrError::ActorNotReady)?;
+            .ok_or(LocalAddrError::ActorNotReady)?;
         select! {
-            res = dispatcher.send(msg) => res.map_err(AddrError::dispatcher_error),
-            () = self.inner.execution_cancellation.cancelled() => Err(AddrError::Stopped),
+            res = dispatcher.send(msg) => res.map_err(LocalAddrError::dispatcher_error),
+            () = self.inner.execution_cancellation.cancelled() => Err(LocalAddrError::Stopped),
         }
     }
 
     /// Impl for trait
-    pub fn dispatch<M>(&self, msg: M) -> Result<(), AddrError>
+    pub fn dispatch<M>(&self, msg: M) -> Result<(), LocalAddrError>
     where
         M: Message,
         A: MessageHandler<M>,
         <A as Actor>::MessagesEnvelope: MessageEnvelopeFactory<A, M>,
     {
         if self.is_finished() {
-            return Err(AddrError::Stopped);
+            return Err(LocalAddrError::Stopped);
         }
 
         let dispatcher = self
             .inner
             .dispatcher
             .get()
-            .ok_or(AddrError::ActorNotReady)?;
+            .ok_or(LocalAddrError::ActorNotReady)?;
         if self.inner.mailbox_cancellation.is_cancelled() {
-            return Err(AddrError::Stopped);
+            return Err(LocalAddrError::Stopped);
         }
         if self.inner.execution_cancellation.is_cancelled() {
-            return Err(AddrError::Stopped);
+            return Err(LocalAddrError::Stopped);
         }
 
         dispatcher
             .dispatch(msg)
-            .map_err(AddrError::dispatcher_error)
+            .map_err(LocalAddrError::dispatcher_error)
     }
 
     /// Checks if actor is cancelled

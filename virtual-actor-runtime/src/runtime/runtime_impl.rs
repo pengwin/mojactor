@@ -5,7 +5,7 @@ use virtual_actor::{
 };
 
 use crate::{
-    address::ActorHandle,
+    address::VirtualAddr,
     executor::{LocalExecutor, LocalExecutorError},
     ExecutorHandle, ExecutorPreferences, GracefulShutdown, LocalAddr, RuntimeContext,
     RuntimeContextFactory,
@@ -80,7 +80,7 @@ impl Runtime {
         &self,
         factory: &Arc<AF>,
         executor: &ExecutorHandle,
-    ) -> Result<ActorHandle<<AF as ActorFactory>::Actor>, LocalExecutorError>
+    ) -> Result<LocalAddr<<AF as ActorFactory>::Actor>, LocalExecutorError>
     where
         <AF as ActorFactory>::Actor:
             Actor<ActorContext = RuntimeContext<<AF as ActorFactory>::Actor>>,
@@ -90,7 +90,14 @@ impl Runtime {
         let context_factory = Arc::new(RuntimeContextFactory::<<AF as ActorFactory>::Actor>::new(
             self.registry.clone(),
         ));
-        executor.spawn_local_actor(factory, &context_factory).await
+        let handle = executor
+            .spawn_local_actor(
+                factory,
+                &context_factory,
+                self.preferences.actor_activation_timeout,
+            )
+            .await?;
+        Ok(handle.addr())
     }
 
     /// Registers virtual actor
@@ -122,11 +129,15 @@ impl Runtime {
     ///
     /// Returns error if actor is not started
     /// Returns error if actor type is not registered in runtime
-    pub async fn spawn_virtual<A>(&self, id: A::ActorId) -> Result<LocalAddr<A>, ActivateActorError>
+    #[allow(clippy::unused_async)]
+    pub async fn spawn_virtual<A>(
+        &self,
+        id: &A::ActorId,
+    ) -> Result<VirtualAddr<A>, ActivateActorError>
     where
         A: VirtualActor + 'static,
     {
-        self.registry.get_or_create(id).await
+        self.registry.get_or_create(id)
     }
 }
 

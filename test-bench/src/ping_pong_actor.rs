@@ -1,14 +1,14 @@
 use virtual_actor_runtime::prelude::*;
-use virtual_actor_runtime::WeakRef;
+use virtual_actor_runtime::WeakLocalAddr;
 
 #[derive(Message)]
 #[result(())]
 pub struct Ping {
-    addr: WeakRef<PingPongActor>,
+    addr: WeakLocalAddr<PingPongActor>,
 }
 
 impl Ping {
-    pub fn new(addr: WeakRef<PingPongActor>) -> Self {
+    pub fn new(addr: WeakLocalAddr<PingPongActor>) -> Self {
         Self { addr }
     }
 }
@@ -16,11 +16,11 @@ impl Ping {
 #[derive(Message)]
 #[result(())]
 pub struct Pong {
-    addr: WeakRef<PingPongActor>,
+    addr: WeakLocalAddr<PingPongActor>,
 }
 
 impl Pong {
-    pub fn new(addr: WeakRef<PingPongActor>) -> Self {
+    pub fn new(addr: WeakLocalAddr<PingPongActor>) -> Self {
         Self { addr }
     }
 }
@@ -39,9 +39,11 @@ pub struct PingPongActor {
 
 impl MessageHandler<Ping> for PingPongActor {
     async fn handle(&mut self, msg: Ping, ctx: &Self::ActorContext) -> <Ping as Message>::Result {
-        let pong = Pong::new(ctx.self_addr().weak_ref());
+        let pong = Pong::new(ctx.self_addr().clone());
         if let Some(addr) = msg.addr.upgrade() {
-            addr.dispatch(pong).expect("Failed to dispatch message");
+            addr.dispatch(pong)
+                .await
+                .expect("Failed to dispatch message");
         }
         self.counter += 1;
     }
@@ -49,9 +51,11 @@ impl MessageHandler<Ping> for PingPongActor {
 
 impl MessageHandler<Pong> for PingPongActor {
     async fn handle(&mut self, msg: Pong, ctx: &Self::ActorContext) -> <Pong as Message>::Result {
-        let ping = Ping::new(ctx.self_addr().weak_ref());
+        let ping = Ping::new(ctx.self_addr().clone());
         if let Some(addr) = msg.addr.upgrade() {
-            addr.dispatch(ping).expect("Failed to dispatch message");
+            addr.dispatch(ping)
+                .await
+                .expect("Failed to dispatch message");
         }
         self.counter += 1;
     }

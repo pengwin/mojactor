@@ -108,10 +108,12 @@ mod tests {
 
         let drain_ct = CancellationToken::new();
 
+        let drain_timeout = Duration::from_millis(5);
+
         let drain_mailbox = async move {
             let mut counter = 0;
             while select! {
-                () = sleep(Duration::from_millis(5)) => panic!("Drain timeout"),
+                () = sleep(drain_timeout) => panic!("Drain timeout"),
                 e = mailbox.recv(&drain_ct) => e,
             }
             .is_some()

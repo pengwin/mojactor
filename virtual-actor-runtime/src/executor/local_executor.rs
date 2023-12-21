@@ -13,7 +13,6 @@ use crate::utils::GracefulShutdown;
 use crate::utils::GracefulShutdownHandle;
 use tokio_util::sync::CancellationToken;
 
-use super::actor_tasks_registry::ActorTasksRegistry;
 use super::error::LocalExecutorError;
 use super::executor_preferences::TokioRuntimePreferences;
 use super::handle::Handle;
@@ -35,8 +34,6 @@ pub struct LocalExecutor {
     local_set_gs: GracefulShutdownHandle,
     /// Thread stopped notify
     thread_stopped_notify: Arc<Notify>,
-    /// Actors
-    actors: Arc<ActorTasksRegistry>,
 }
 
 impl GracefulShutdown for LocalExecutor {
@@ -49,9 +46,6 @@ impl GracefulShutdown for LocalExecutor {
             Err(WaitError::Timeout(w)) => {
                 eprintln!("{w} wait timeout");
                 self.spawner_gs.shutdown();
-                if self.actors.count() > 0 {
-                    eprintln!("There are still actors in registry");
-                }
                 // wait for spawn task to finish
                 // to ensure that no actors will be spawned
                 self.spawner_gs.wait(timeout).await
@@ -99,10 +93,7 @@ impl LocalExecutor {
 
         let thread_stopped_notify = Arc::new(Notify::new());
 
-        let actors = ActorTasksRegistry::new();
-
         let spawner = LocalSpawner::new(
-            &actors,
             &preferences.mailbox_preferences,
             &mailbox_cancellation.child_token(),
             &executor_cancellation.child_token(),
@@ -137,7 +128,6 @@ impl LocalExecutor {
             spawner_gs,
             local_set_gs,
             thread_stopped_notify,
-            actors,
         })
     }
 

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use tokio_util::sync::CancellationToken;
 use virtual_actor::{
@@ -65,6 +65,7 @@ impl Handle {
         &self,
         actor_factory: &Arc<AF>,
         context_factory: &Arc<CF>,
+        timeout: Duration,
     ) -> Result<ActorHandle<<AF as ActorFactory>::Actor>, LocalExecutorError>
     where
         <<AF as ActorFactory>::Actor as Actor>::ActorContext: ActorContext<
@@ -79,6 +80,7 @@ impl Handle {
             actor_factory,
             context_factory,
             local_actor::create_local_actor,
+            timeout,
         )
         .await
     }
@@ -183,6 +185,7 @@ impl Handle {
         actor_factory: &Arc<AF>,
         context_factory: &Arc<CF>,
         spawner: F,
+        timeout: Duration,
     ) -> Result<ActorHandle<<AF as ActorFactory>::Actor>, LocalExecutorError>
     where
         <<AF as ActorFactory>::Actor as Actor>::ActorContext: ActorContext<
@@ -202,9 +205,7 @@ impl Handle {
         ),
     {
         let handle = self.spawn_actor_no_wait(actor_factory, context_factory, spawner)?;
-        handle
-            .wait_for_dispatcher(std::time::Duration::from_millis(100))
-            .await?;
+        handle.wait_for_dispatcher(timeout).await?;
         Ok(handle)
     }
 }

@@ -2,7 +2,7 @@ use std::sync::{Arc, OnceLock};
 
 use tokio_util::sync::CancellationToken;
 use virtual_actor::{
-    Actor, ActorContext, ActorFactory, LocalActor, LocalActorFactory, Uuid, VirtualActor,
+    Actor, ActorContext, ActorFactory, LocalActor, LocalActorFactory, VirtualActor,
     VirtualActorFactory,
 };
 
@@ -41,12 +41,12 @@ where
         mailbox_cancellation,
         dispatched_msg_counter.clone(),
     );
+    let actor_loop = LocalActorLoop::default();
     let spawner = LocalSpawnedActorImpl::new(
-        Uuid::new_v4(),
         actor_factory,
         context_factory,
         &handle,
-        LocalActorLoop::default(),
+        actor_loop,
         dispatched_msg_counter,
     );
 
@@ -79,12 +79,12 @@ where
         mailbox_cancellation,
         dispatched_msg_counter.clone(),
     );
+    let actor_loop = VirtualActorLoop::new(actor_id, handle.processed_msg_counter());
     let spawner = LocalSpawnedActorImpl::new(
-        Uuid::new_v4(),
         actor_factory,
         context_factory,
         &handle,
-        VirtualActorLoop::new(actor_id, handle.processed_msg_counter()),
+        actor_loop,
         dispatched_msg_counter,
     );
 
