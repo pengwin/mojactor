@@ -78,32 +78,18 @@ impl MessageHandler<VirtualGetCounter> for VirtualPongActor {
     }
 }
 
-#[allow(clippy::module_name_repetitions)]
-pub struct VirtualPingActorFactory;
-
-impl ActorFactory for VirtualPingActorFactory {
-    type Actor = VirtualPingActor;
-}
-
-impl VirtualActorFactory for VirtualPingActorFactory {
-    async fn create_actor(&self, id: &u32) -> VirtualPingActor {
-        VirtualPingActor {
+impl VirtualActorConstructor for VirtualPingActor {
+    fn new(id: &u32) -> Self {
+        Self {
             id: *id,
             counter: 0,
         }
     }
 }
 
-#[allow(clippy::module_name_repetitions)]
-pub struct VirtualPongActorFactory;
-
-impl ActorFactory for VirtualPongActorFactory {
-    type Actor = VirtualPongActor;
-}
-
-impl VirtualActorFactory for VirtualPongActorFactory {
-    async fn create_actor(&self, id: &u32) -> VirtualPongActor {
-        VirtualPongActor {
+impl VirtualActorConstructor for VirtualPongActor {
+    fn new(id: &u32) -> Self {
+        Self {
             id: *id,
             counter: 0,
         }

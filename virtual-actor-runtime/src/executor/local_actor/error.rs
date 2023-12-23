@@ -14,6 +14,17 @@ pub enum ActorTaskError {
     /// Cancelled
     #[error("Cancelled")]
     Cancelled,
+    /// Actor factory error
+    #[error("Actor factory error {0:?}")]
+    ActorFactoryError(Box<dyn std::error::Error + 'static + Send + Sync>),
+}
+
+impl ActorTaskError {
+    /// Creates new actor factory error
+    #[must_use]
+    pub fn actor_factory_error<E: std::error::Error + 'static + Send + Sync>(e: E) -> Self {
+        Self::ActorFactoryError(Box::new(e))
+    }
 }
 
 #[derive(Debug, thiserror::Error)]

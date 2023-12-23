@@ -10,7 +10,7 @@ pub struct PendingTask;
 #[result(())]
 pub struct ThreadSleepTask;
 
-#[derive(Actor, LocalActor)]
+#[derive(Actor, LocalActor, Default)]
 #[message(PendingTask)]
 #[message(ThreadSleepTask)]
 pub struct InfiniteLoopActor;
@@ -32,18 +32,5 @@ impl MessageHandler<ThreadSleepTask> for InfiniteLoopActor {
         _ctx: &Self::ActorContext,
     ) -> <ThreadSleepTask as Message>::Result {
         std::thread::sleep(Duration::from_secs(3600));
-    }
-}
-
-#[allow(clippy::module_name_repetitions)]
-pub struct InfiniteLoopActorFactory;
-
-impl ActorFactory for InfiniteLoopActorFactory {
-    type Actor = InfiniteLoopActor;
-}
-
-impl LocalActorFactory for InfiniteLoopActorFactory {
-    async fn create_actor(&self) -> InfiniteLoopActor {
-        InfiniteLoopActor
     }
 }

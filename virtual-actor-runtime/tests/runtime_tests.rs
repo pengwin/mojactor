@@ -3,8 +3,7 @@ use std::time::{Duration, Instant};
 use virtual_actor_runtime::{prelude::*, GracefulShutdown};
 
 use crate::actors::ping_pong_virtual_actor::{
-    VirtualGetCounter, VirtualPing, VirtualPingActor, VirtualPingActorFactory, VirtualPongActor,
-    VirtualPongActorFactory,
+    VirtualGetCounter, VirtualPing, VirtualPingActor, VirtualPongActor,
 };
 
 mod actors;
@@ -14,13 +13,11 @@ const SHUTDOWN_TIMEOUT: Duration = Duration::from_millis(10000);
 #[allow(clippy::similar_names)]
 #[tokio::test]
 async fn bench_virtual_ping_pong() -> Result<(), Box<dyn std::error::Error>> {
-    println!("bench_virtual_ping_pong");
-
     let mut runtime = Runtime::new()?;
     let executor = runtime.create_executor()?;
 
-    runtime.register_actor(VirtualPingActorFactory, &executor)?;
-    runtime.register_actor(VirtualPongActorFactory, &executor)?;
+    runtime.register_actor::<VirtualPingActor>(&executor)?;
+    runtime.register_actor::<VirtualPongActor>(&executor)?;
 
     let num_iteration: u32 = 10_000;
     let id = 42;

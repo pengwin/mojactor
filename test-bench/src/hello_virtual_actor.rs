@@ -22,12 +22,6 @@ pub struct HelloVirtualActor {
     counter: u32,
 }
 
-impl HelloVirtualActor {
-    pub fn new(id: u32) -> Self {
-        Self { id, counter: 0 }
-    }
-}
-
 impl MessageHandler<HelloVirtualMessage> for HelloVirtualActor {
     async fn handle(
         &mut self,
@@ -40,15 +34,11 @@ impl MessageHandler<HelloVirtualMessage> for HelloVirtualActor {
     }
 }
 
-#[derive(Default)]
-pub struct HelloVirtualActorFactory;
-
-impl ActorFactory for HelloVirtualActorFactory {
-    type Actor = HelloVirtualActor;
-}
-
-impl VirtualActorFactory for HelloVirtualActorFactory {
-    async fn create_actor(&self, id: &u32) -> HelloVirtualActor {
-        HelloVirtualActor::new(*id)
+impl VirtualActorConstructor for HelloVirtualActor {
+    fn new(id: &u32) -> Self {
+        Self {
+            id: *id,
+            counter: 0,
+        }
     }
 }

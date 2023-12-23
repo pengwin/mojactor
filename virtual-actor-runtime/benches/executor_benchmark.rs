@@ -5,11 +5,11 @@
 
 use std::sync::Arc;
 
-use bench_actor::{AksMessage, BenchActorFactory, DispatchMessage, EchoMessage};
+use bench_actor::{AksMessage, BenchActor, DispatchMessage, EchoMessage};
 use criterion::{criterion_group, criterion_main, Criterion};
 use virtual_actor::ActorAddr;
 use virtual_actor_runtime::{
-    prelude::Runtime, ExecutorHandle, ExecutorPreferences, TokioRuntimePreferences,
+    prelude::Runtime, ExecutorHandle, ExecutorPreferences, LocalAddr, TokioRuntimePreferences,
 };
 
 fn create_runtime() -> Result<tokio::runtime::Runtime, Box<dyn std::error::Error>> {
@@ -41,10 +41,8 @@ pub fn messaging_benchmark(c: &mut Criterion) -> Result<(), Box<dyn std::error::
     let mut runtime = Runtime::new()?;
     let executor = create_executor(&mut runtime)?;
 
-    let actor_factory = Arc::new(BenchActorFactory {});
-
-    let addr = benchmark_runtime
-        .block_on(async { runtime.spawn_local(&actor_factory, &executor).await })?;
+    let addr: LocalAddr<BenchActor> =
+        benchmark_runtime.block_on(async { runtime.spawn_local(&executor).await })?;
 
     c.bench_function("send_wait", |b| {
         b.to_async(&benchmark_runtime).iter(|| async {
@@ -74,16 +72,14 @@ pub fn inter_thread_messaging_benchmark(
     let executor_1 = create_executor(&mut runtime)?;
     let executor_2 = create_executor(&mut runtime)?;
 
-    let actor_factory = Arc::new(BenchActorFactory {});
+    let addr_1_1: LocalAddr<BenchActor> =
+        benchmark_runtime.block_on(async { runtime.spawn_local(&executor_1).await })?;
 
-    let addr_1_1 = benchmark_runtime
-        .block_on(async { runtime.spawn_local(&actor_factory, &executor_1).await })?;
+    let addr_1_2: LocalAddr<BenchActor> =
+        benchmark_runtime.block_on(async { runtime.spawn_local(&executor_1).await })?;
 
-    let addr_1_2 = benchmark_runtime
-        .block_on(async { runtime.spawn_local(&actor_factory, &executor_1).await })?;
-
-    let addr_2_2 = benchmark_runtime
-        .block_on(async { runtime.spawn_local(&actor_factory, &executor_2).await })?;
+    let addr_2_2: LocalAddr<BenchActor> =
+        benchmark_runtime.block_on(async { runtime.spawn_local(&executor_2).await })?;
 
     c.bench_function("single thread communication", |b| {
         b.to_async(&benchmark_runtime).iter(|| async {
@@ -143,7 +139,7 @@ mod bench_actor {
     #[result(())]
     pub struct DispatchMessage;
 
-    #[derive(Actor, LocalActor)]
+    #[derive(Actor, LocalActor, Default)]
     #[message(EchoMessage)]
     #[message(DispatchMessage)]
     #[message(AksMessage)]
@@ -180,19 +176,6 @@ mod bench_actor {
                     println!("Error: {e:?}");
                 }
             }
-        }
-    }
-
-    #[derive(Default)]
-    pub struct BenchActorFactory {}
-
-    impl ActorFactory for BenchActorFactory {
-        type Actor = BenchActor;
-    }
-
-    impl LocalActorFactory for BenchActorFactory {
-        async fn create_actor(&self) -> BenchActor {
-            BenchActor
         }
     }
 }

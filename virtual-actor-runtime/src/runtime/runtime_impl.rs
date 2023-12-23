@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use virtual_actor::{
-    Actor, ActorFactory, LocalActor, LocalActorFactory, VirtualActor, VirtualActorFactory,
+    Actor, ActorFactory, DefaultLocalActorFactory, DefaultVirtualActorFactory, LocalActor,
+    LocalActorConstructor, LocalActorFactory, VirtualActor, VirtualActorConstructor,
+    VirtualActorFactory,
 };
 
 use crate::{
@@ -91,9 +93,28 @@ impl Runtime {
     ///
     /// Returns error if executor thread is not started
     /// Returns error if spawner was not send
-    pub async fn spawn_local<AF>(
+    pub async fn spawn_local<A>(
         &self,
-        factory: &Arc<AF>,
+        executor: &ExecutorHandle,
+    ) -> Result<LocalAddr<A>, LocalExecutorError>
+    where
+        A: LocalActor + LocalActorConstructor,
+        A: Actor<ActorContext = RuntimeContext<A>>,
+    {
+        let actor_factory = Arc::new(DefaultLocalActorFactory::default());
+        self.spawn_local_with_factory(&actor_factory, executor)
+            .await
+    }
+
+    /// Spawns local actor on executor
+    ///
+    /// # Errors
+    ///
+    /// Returns error if executor thread is not started
+    /// Returns error if spawner was not send
+    pub async fn spawn_local_with_factory<AF>(
+        &self,
+        actor_factory: &Arc<AF>,
         executor: &ExecutorHandle,
     ) -> Result<LocalAddr<<AF as ActorFactory>::Actor>, LocalExecutorError>
     where
@@ -107,7 +128,7 @@ impl Runtime {
         ));
         let handle = executor
             .spawn_local_actor(
-                factory,
+                actor_factory,
                 &context_factory,
                 self.preferences.actor_activation_timeout,
             )
@@ -120,7 +141,21 @@ impl Runtime {
     /// # Errors
     ///
     /// Returns error if was not able to register actor
-    pub fn register_actor<AF>(
+    pub fn register_actor<A>(&self, executor: &ExecutorHandle) -> Result<(), LocalExecutorError>
+    where
+        A: VirtualActor + VirtualActorConstructor,
+        A: Actor<ActorContext = RuntimeContext<A>>,
+    {
+        let factory = DefaultVirtualActorFactory::<A>::default();
+        self.register_actor_with_factory(factory, executor)
+    }
+
+    /// Registers virtual actor
+    ///
+    /// # Errors
+    ///
+    /// Returns error if was not able to register actor
+    pub fn register_actor_with_factory<AF>(
         &self,
         factory: AF,
         executor: &ExecutorHandle,

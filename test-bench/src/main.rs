@@ -7,25 +7,19 @@ mod infinite_loop_actor;
 mod ping_pong_actor;
 mod ping_pong_virtual_actor;
 
-use std::{
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 use futures::StreamExt;
 use tokio_util::codec::{FramedRead, LinesCodec};
-use virtual_actor_runtime::prelude::*;
+use virtual_actor_runtime::{prelude::*, LocalAddr};
 use virtual_actor_runtime::{GracefulShutdown, WaitError};
 
 use crate::{
-    hello_actor::{HelloActorFactory, HelloMessage},
-    hello_virtual_actor::{HelloVirtualActor, HelloVirtualActorFactory, HelloVirtualMessage},
-    infinite_loop_actor::{InfiniteLoopActorFactory, PendingTask, ThreadSleepTask},
-    ping_pong_actor::{Ping, PingPongActorFactory},
-    ping_pong_virtual_actor::{
-        VirtualGetCounter, VirtualPing, VirtualPingActor, VirtualPingActorFactory,
-        VirtualPongActor, VirtualPongActorFactory,
-    },
+    hello_actor::{HelloActor, HelloMessage},
+    hello_virtual_actor::{HelloVirtualActor, HelloVirtualMessage},
+    infinite_loop_actor::{InfiniteLoopActor, PendingTask, ThreadSleepTask},
+    ping_pong_actor::{Ping, PingPongActor},
+    ping_pong_virtual_actor::{VirtualGetCounter, VirtualPing, VirtualPingActor, VirtualPongActor},
 };
 
 const SHUTDOWN_TIMEOUT: Duration = Duration::from_millis(10000);
@@ -47,15 +41,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn bench_spawn_wait_shutdown() -> Result<(), Box<dyn std::error::Error>> {
     println!("bench_spawn_wait_shutdown");
 
-    let actor_factory = Arc::new(HelloActorFactory::default());
-
     let mut runtime = Runtime::new()?;
     let executor = runtime.create_executor()?;
 
     let num_iteration = 10_000;
     let start = Instant::now();
     for _ in 0..num_iteration {
-        let addr = runtime.spawn_local(&actor_factory, &executor).await?;
+        let addr: LocalAddr<HelloActor> = runtime.spawn_local(&executor).await?;
         let _res = addr.send(HelloMessage::new("world")).await??;
         addr.graceful_shutdown(SHUTDOWN_TIMEOUT).await?;
     }
@@ -74,12 +66,10 @@ async fn bench_spawn_wait_shutdown() -> Result<(), Box<dyn std::error::Error>> {
 async fn bench_send_wait() -> Result<(), Box<dyn std::error::Error>> {
     println!("bench_send_wait");
 
-    let actor_factory = Arc::new(HelloActorFactory {});
-
     let mut runtime = Runtime::new()?;
     let executor = runtime.create_executor()?;
 
-    let addr = runtime.spawn_local(&actor_factory, &executor).await?;
+    let addr: LocalAddr<HelloActor> = runtime.spawn_local(&executor).await?;
 
     let num_iteration = 10_000;
     let start = Instant::now();
@@ -102,13 +92,11 @@ async fn bench_send_wait() -> Result<(), Box<dyn std::error::Error>> {
 async fn bench_same_thread_ping_pong() -> Result<(), Box<dyn std::error::Error>> {
     println!("bench_same_thread_ping_pong");
 
-    let actor_factory = Arc::new(PingPongActorFactory {});
-
     let mut runtime = Runtime::new()?;
     let executor = runtime.create_executor()?;
 
-    let ping_addr = runtime.spawn_local(&actor_factory, &executor).await?;
-    let pong_addr = runtime.spawn_local(&actor_factory, &executor).await?;
+    let ping_addr: LocalAddr<PingPongActor> = runtime.spawn_local(&executor).await?;
+    let pong_addr: LocalAddr<PingPongActor> = runtime.spawn_local(&executor).await?;
 
     ping_addr.send(Ping::new(pong_addr.weak_ref())).await?;
     pong_addr.send(Ping::new(ping_addr.weak_ref())).await?;
@@ -134,8 +122,6 @@ async fn bench_same_thread_ping_pong() -> Result<(), Box<dyn std::error::Error>>
 async fn bench_2_executors_ping_pong() -> Result<(), Box<dyn std::error::Error>> {
     println!("bench_2_executors_ping_pong");
 
-    let actor_factory = Arc::new(PingPongActorFactory {});
-
     let mut runtime = Runtime::new()?;
 
     let executor_ping = runtime.create_executor()?;
@@ -143,8 +129,8 @@ async fn bench_2_executors_ping_pong() -> Result<(), Box<dyn std::error::Error>>
 
     let runtime = Runtime::new()?;
 
-    let ping_addr = runtime.spawn_local(&actor_factory, &executor_ping).await?;
-    let pong_addr = runtime.spawn_local(&actor_factory, &executor_pong).await?;
+    let ping_addr: LocalAddr<PingPongActor> = runtime.spawn_local(&executor_ping).await?;
+    let pong_addr: LocalAddr<PingPongActor> = runtime.spawn_local(&executor_pong).await?;
 
     ping_addr.send(Ping::new(pong_addr.weak_ref())).await?;
     pong_addr.send(Ping::new(ping_addr.weak_ref())).await?;
@@ -170,12 +156,10 @@ async fn bench_2_executors_ping_pong() -> Result<(), Box<dyn std::error::Error>>
 async fn bench_infinite_loop_pending() -> Result<(), Box<dyn std::error::Error>> {
     println!("bench_infinite_loop_pending");
 
-    let actor_factory = Arc::new(InfiniteLoopActorFactory {});
-
     let mut runtime = Runtime::new()?;
     let executor = runtime.create_executor()?;
 
-    let addr = runtime.spawn_local(&actor_factory, &executor).await?;
+    let addr: LocalAddr<InfiniteLoopActor> = runtime.spawn_local(&executor).await?;
 
     addr.dispatch(PendingTask).await?;
 
@@ -193,7 +177,7 @@ async fn bench_virtual_actor_spawn_send_wait() -> Result<(), Box<dyn std::error:
     let mut runtime = Runtime::new()?;
     let executor = runtime.create_executor()?;
 
-    runtime.register_actor(HelloVirtualActorFactory, &executor)?;
+    runtime.register_actor::<HelloVirtualActor>(&executor)?;
 
     let num_iteration: u32 = 10_000;
     let start = Instant::now();
@@ -222,8 +206,8 @@ async fn bench_virtual_ping_pong() -> Result<(), Box<dyn std::error::Error>> {
     let mut runtime = Runtime::new()?;
     let executor = runtime.create_executor()?;
 
-    runtime.register_actor(VirtualPingActorFactory, &executor)?;
-    runtime.register_actor(VirtualPongActorFactory, &executor)?;
+    runtime.register_actor::<VirtualPingActor>(&executor)?;
+    runtime.register_actor::<VirtualPongActor>(&executor)?;
 
     let num_iteration: u32 = 10_000;
     let id = 42;
@@ -260,12 +244,10 @@ async fn bench_virtual_ping_pong() -> Result<(), Box<dyn std::error::Error>> {
 async fn bench_infinite_loop_thread_sleep() -> Result<(), Box<dyn std::error::Error>> {
     println!("bench_infinite_loop_thread_sleep");
 
-    let actor_factory = Arc::new(InfiniteLoopActorFactory);
-
     let mut runtime = Runtime::new()?;
     let executor = runtime.create_executor()?;
 
-    let addr = runtime.spawn_local(&actor_factory, &executor).await?;
+    let addr: LocalAddr<InfiniteLoopActor> = runtime.spawn_local(&executor).await?;
 
     addr.dispatch(ThreadSleepTask).await?;
 
@@ -295,7 +277,7 @@ async fn test_qwe() -> Result<(), Box<dyn std::error::Error>> {
     let mut runtime = Runtime::new()?;
     let executor = runtime.create_executor()?;
 
-    runtime.register_actor(HelloVirtualActorFactory, &executor)?;
+    runtime.register_actor::<HelloVirtualActor>(&executor)?;
 
     let num_iteration: u32 = 10_000;
     let start = Instant::now();

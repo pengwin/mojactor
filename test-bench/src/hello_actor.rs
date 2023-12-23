@@ -12,16 +12,10 @@ impl HelloMessage {
     }
 }
 
-#[derive(Actor, LocalActor)]
+#[derive(Actor, LocalActor, Default)]
 #[message(HelloMessage)]
 pub struct HelloActor {
     counter: u32,
-}
-
-impl HelloActor {
-    pub fn new() -> Self {
-        Self { counter: 0 }
-    }
 }
 
 impl MessageHandler<HelloMessage> for HelloActor {
@@ -33,18 +27,5 @@ impl MessageHandler<HelloMessage> for HelloActor {
         self.counter += 1;
         let result = format!("Hello {} {}", msg.msg, self.counter);
         Ok(result.to_string())
-    }
-}
-
-#[derive(Default)]
-pub struct HelloActorFactory {}
-
-impl ActorFactory for HelloActorFactory {
-    type Actor = HelloActor;
-}
-
-impl LocalActorFactory for HelloActorFactory {
-    async fn create_actor(&self) -> HelloActor {
-        HelloActor::new()
     }
 }

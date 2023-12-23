@@ -78,7 +78,10 @@ where
         context_factory: Arc<CF>,
         handle: ActorHandle<<AF as ActorFactory>::Actor>,
     ) -> Result<(), ActorTaskError> {
-        let mut actor = actor_factory.create_actor(&self.actor_id).await;
+        let mut actor = actor_factory
+            .create_actor(&self.actor_id)
+            .await
+            .map_err(ActorTaskError::actor_factory_error)?;
 
         let context = context_factory.create_context(&handle);
 

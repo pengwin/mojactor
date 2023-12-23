@@ -1,26 +1,14 @@
-use std::{sync::Arc, thread::ThreadId};
+use std::thread::ThreadId;
 
-use virtual_actor_runtime::prelude::*;
+use virtual_actor_runtime::{prelude::*, LocalAddr};
 
 #[derive(Message)]
 #[result(ThreadId)]
 pub struct GetThreadId;
 
-#[derive(Actor, LocalActor)]
+#[derive(Actor, LocalActor, Default)]
 #[message(GetThreadId)]
 pub struct TestActor;
-
-pub struct TestActorFactory;
-
-impl ActorFactory for TestActorFactory {
-    type Actor = TestActor;
-}
-
-impl LocalActorFactory for TestActorFactory {
-    async fn create_actor(&self) -> TestActor {
-        TestActor
-    }
-}
 
 impl MessageHandler<GetThreadId> for TestActor {
     async fn handle(
@@ -37,11 +25,9 @@ async fn test_local_executor_actor_threads_id() -> Result<(), Box<dyn std::error
     let mut runtime = Runtime::new()?;
     let executor = runtime.create_executor()?;
 
-    let actor_factory = Arc::new(TestActorFactory);
+    let actor_one: LocalAddr<TestActor> = runtime.spawn_local(&executor).await?;
 
-    let actor_one = runtime.spawn_local(&actor_factory, &executor).await?;
-
-    let actor_two = runtime.spawn_local(&actor_factory, &executor).await?;
+    let actor_two: LocalAddr<TestActor> = runtime.spawn_local(&executor).await?;
 
     let current_thread_id = std::thread::current().id();
 
@@ -70,11 +56,8 @@ async fn test_local_executors_threads_id() -> Result<(), Box<dyn std::error::Err
     let executor_one = runtime.create_executor()?;
     let executor_two = runtime.create_executor()?;
 
-    let actor_factory = Arc::new(TestActorFactory);
-
-    let actor_one = runtime.spawn_local(&actor_factory, &executor_one).await?;
-
-    let actor_two = runtime.spawn_local(&actor_factory, &executor_two).await?;
+    let actor_one: LocalAddr<TestActor> = runtime.spawn_local(&executor_one).await?;
+    let actor_two: LocalAddr<TestActor> = runtime.spawn_local(&executor_two).await?;
 
     let current_thread_id = std::thread::current().id();
 

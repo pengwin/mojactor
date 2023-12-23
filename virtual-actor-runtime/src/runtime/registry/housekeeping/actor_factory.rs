@@ -27,11 +27,13 @@ impl<A: VirtualActor> ActorFactory for HousekeepingActorFactory<A> {
 }
 
 impl<A: VirtualActor> LocalActorFactory for HousekeepingActorFactory<A> {
-    async fn create_actor(&self) -> HousekeepingActor<A> {
-        HousekeepingActor {
+    type Error = std::convert::Infallible;
+
+    async fn create_actor(&self) -> Result<HousekeepingActor<A>, Self::Error> {
+        Ok(HousekeepingActor {
             cache: self.cache.clone(),
             preferences: self.preferences.clone(),
             actor_counters: ActorCountersMap::new(),
-        }
+        })
     }
 }
