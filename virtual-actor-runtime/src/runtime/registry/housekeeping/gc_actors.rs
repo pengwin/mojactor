@@ -1,8 +1,13 @@
+use std::time::Duration;
+
 use virtual_actor::{
-    ActorAddr, ActorContext, Message, MessageHandler, VirtualActor, WeakActorAddr,
+    ActorAddr, ActorContext, CancellationToken, Message, MessageHandler, VirtualActor,
+    WeakActorAddr,
 };
 
-use crate::GracefulShutdown;
+use crate::{
+    utils::cancellation_token_wrapper::CancellationTokenWrapper, GracefulShutdown, WaitError,
+};
 
 use super::HousekeepingActor;
 
@@ -62,16 +67,29 @@ impl<A: VirtualActor> MessageHandler<GarbageCollectActors> for HousekeepingActor
 
         // schedule next garbage collection
         let addr = ctx.self_addr().clone();
+        let cancellation_token = ctx.cancellation_token().clone();
         let interval = self.preferences.garbage_collect_interval;
         tokio::task::spawn_local(async move {
+            if let Err(e) = sleep_with_cancel(interval, &cancellation_token).await {
+                eprintln!("Failed to wait for interval: {e:?}");
+                return;
+            }
             tokio::time::sleep(interval).await;
             if let Some(addr) = addr.upgrade() {
                 addr.dispatch(GarbageCollectActors)
                     .await
                     .expect("Failed to dispatch message");
-            } else {
-                println!("Housekeeping stopped");
             }
         });
+    }
+}
+
+async fn sleep_with_cancel(
+    duration: Duration,
+    cancellation: &CancellationTokenWrapper,
+) -> Result<(), WaitError> {
+    tokio::select! {
+        () = cancellation.cancelled()  => Err(WaitError::Cancelled("Sleep cancelled".to_owned())),
+        () = tokio::time::sleep(duration) => Ok(()),
     }
 }

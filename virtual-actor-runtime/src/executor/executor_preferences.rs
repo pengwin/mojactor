@@ -22,6 +22,8 @@ impl Default for TokioRuntimePreferences {
 
 /// Local executor preferences
 pub struct ExecutorPreferences {
+    /// Executor thread name
+    pub thread_name: String,
     /// Mailbox preferences
     pub mailbox_preferences: MailboxPreferences,
     /// Tokio runtime preferences
@@ -31,6 +33,7 @@ pub struct ExecutorPreferences {
 impl Default for ExecutorPreferences {
     fn default() -> Self {
         Self {
+            thread_name: "local-executor".to_string(),
             mailbox_preferences: MailboxPreferences { size: 1024 },
             tokio_runtime_preferences: TokioRuntimePreferences::default(),
         }

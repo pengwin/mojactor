@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 
 use dashmap::DashMap;
 use virtual_actor::{
@@ -6,11 +6,8 @@ use virtual_actor::{
 };
 
 use crate::{
-    address::VirtualAddr,
-    context::ActorContextFactory,
-    executor::{LocalExecutor, LocalExecutorError},
-    runtime::runtime_preferences::RuntimePreferences,
-    ExecutorHandle, ExecutorPreferences, LocalAddr, TokioRuntimePreferences,
+    address::VirtualAddr, context::ActorContextFactory, executor::LocalExecutorError,
+    runtime::runtime_preferences::RuntimePreferences, ExecutorHandle, LocalAddr,
 };
 
 use super::actor_activator::{ActorActivator, ActorSpawnError};
@@ -19,6 +16,8 @@ use super::actor_activator::{ActorActivator, ActorSpawnError};
 pub enum ActivateActorError {
     #[error("Actor {0:?} not found")]
     ActorNotFound(ActorName),
+    #[error("Actor registry dropped")]
+    ActorRegistryDropped,
     #[error("Unexpected activator registered for actor {0:?}")]
     UnexpectedActivator(ActorName),
     #[error("ActorSpawnError: {0:?}")]
@@ -26,23 +25,49 @@ pub enum ActivateActorError {
 }
 
 pub struct ActorRegistry {
+    inner: Arc<Inner>,
+}
+
+#[derive(Clone)]
+pub struct WeakActorRegistry {
+    inner: Weak<Inner>,
+}
+
+impl WeakActorRegistry {
+    /// Gets or creates virtual actor
+    pub fn get_or_create<A: VirtualActor>(
+        &self,
+        id: &A::ActorId,
+    ) -> Result<VirtualAddr<A>, ActivateActorError> {
+        let inner = self
+            .inner
+            .upgrade()
+            .ok_or(ActivateActorError::ActorRegistryDropped)?;
+        let reg = ActorRegistry { inner };
+        reg.get_or_create(id)
+    }
+}
+
+struct Inner {
     activators: DashMap<ActorName, Box<dyn std::any::Any + Send + Sync>>,
-    housekeeping_executor: LocalExecutor,
+    housekeeping_executor: ExecutorHandle,
 }
 
 impl ActorRegistry {
-    pub fn new() -> Result<Self, LocalExecutorError> {
-        Ok(Self {
+    pub fn new(housekeeping_executor: &ExecutorHandle) -> Self {
+        let inner = Inner {
             activators: DashMap::new(),
-            housekeeping_executor: LocalExecutor::new(&ExecutorPreferences {
-                tokio_runtime_preferences: TokioRuntimePreferences {
-                    enable_io: false,
-                    enable_time: true,
-                    ..Default::default()
-                },
-                ..Default::default()
-            })?,
-        })
+            housekeeping_executor: housekeeping_executor.clone(),
+        };
+        Self {
+            inner: Arc::new(inner),
+        }
+    }
+
+    pub fn weak_ref(&self) -> WeakActorRegistry {
+        WeakActorRegistry {
+            inner: Arc::downgrade(&self.inner),
+        }
     }
 
     pub fn register_actor<AF, CF>(
@@ -66,10 +91,10 @@ impl ActorRegistry {
             factory,
             context_factory,
             executor,
-            self.housekeeping_executor.handle(),
+            &self.inner.housekeeping_executor,
             preferences,
         )?;
-        self.activators.insert(name, Box::new(activator));
+        self.inner.activators.insert(name, Box::new(activator));
         Ok(())
     }
 
@@ -80,6 +105,7 @@ impl ActorRegistry {
     ) -> Result<VirtualAddr<A>, ActivateActorError> {
         let name = A::name();
         let activator = self
+            .inner
             .activators
             .get(&name)
             .ok_or(ActivateActorError::ActorNotFound(name))?;

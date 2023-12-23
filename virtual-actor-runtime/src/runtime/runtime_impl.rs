@@ -8,7 +8,7 @@ use crate::{
     address::VirtualAddr,
     executor::{LocalExecutor, LocalExecutorError},
     ExecutorHandle, ExecutorPreferences, GracefulShutdown, LocalAddr, RuntimeContext,
-    RuntimeContextFactory,
+    RuntimeContextFactory, TokioRuntimePreferences,
 };
 
 use super::{
@@ -19,7 +19,7 @@ use super::{
 /// Virtual actor runtime
 pub struct Runtime {
     preferences: Arc<RuntimePreferences>,
-    registry: Arc<ActorRegistry>,
+    registry: ActorRegistry,
     executors: Vec<LocalExecutor>,
 }
 
@@ -39,10 +39,21 @@ impl Runtime {
     ///
     /// Returns error if was not able to create actor registry
     pub fn with_preferences(preferences: RuntimePreferences) -> Result<Self, LocalExecutorError> {
+        let housekeeping_executor = LocalExecutor::new(&ExecutorPreferences {
+            tokio_runtime_preferences: TokioRuntimePreferences {
+                enable_io: false,
+                enable_time: true,
+                ..Default::default()
+            },
+            thread_name: "housekeeping-executor".to_string(),
+            ..Default::default()
+        })?;
+
+        let registry = ActorRegistry::new(housekeeping_executor.handle());
         Ok(Self {
             preferences: Arc::new(preferences),
-            registry: Arc::new(ActorRegistry::new()?),
-            executors: Vec::new(),
+            registry,
+            executors: vec![housekeeping_executor],
         })
     }
 
@@ -52,7 +63,11 @@ impl Runtime {
     ///
     /// Returns error if was not able to create executor
     pub fn create_executor(&mut self) -> Result<ExecutorHandle, LocalExecutorError> {
-        self.create_executor_with_preferences(&ExecutorPreferences::default())
+        let thread_name = format!("local-executor-{}", self.executors.len());
+        self.create_executor_with_preferences(&ExecutorPreferences {
+            thread_name,
+            ..Default::default()
+        })
     }
 
     /// Creates executor based on `tokio::LocalSet` with preferences
@@ -88,7 +103,7 @@ impl Runtime {
         <AF as ActorFactory>::Actor: LocalActor,
     {
         let context_factory = Arc::new(RuntimeContextFactory::<<AF as ActorFactory>::Actor>::new(
-            self.registry.clone(),
+            self.registry.weak_ref(),
         ));
         let handle = executor
             .spawn_local_actor(
@@ -117,7 +132,7 @@ impl Runtime {
         <AF as ActorFactory>::Actor: VirtualActor,
     {
         let context_factory = Arc::new(RuntimeContextFactory::<<AF as ActorFactory>::Actor>::new(
-            self.registry.clone(),
+            self.registry.weak_ref(),
         ));
         self.registry
             .register_actor(factory, context_factory, executor, self.preferences.clone())
@@ -150,6 +165,7 @@ impl GracefulShutdown for Runtime {
             executor.graceful_shutdown(timeout).await?;
         }
 
+        println!("Runtime is stopped");
         Ok(())
     }
 }

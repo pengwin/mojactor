@@ -89,8 +89,10 @@ impl<A: VirtualActor> ActorActivator<A> {
         let cache = ActorsCache::new();
         let housekeeping_actor_factory =
             Arc::new(HousekeepingActorFactory::new(cache.clone(), &preferences));
+        let context_cancellation = housekeeping_executor.executor_cancellation().child_token();
         let housekeeping_context_factory =
-            Arc::new(HousekeepingContextFactory::<<AF as ActorFactory>::Actor>::default());
+            HousekeepingContextFactory::<<AF as ActorFactory>::Actor>::new(context_cancellation);
+        let housekeeping_context_factory = Arc::new(housekeeping_context_factory);
         let housekeeping_actor = housekeeping_executor
             .spawn_local_actor_no_wait(&housekeeping_actor_factory, &housekeeping_context_factory)?
             .addr();

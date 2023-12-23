@@ -28,7 +28,7 @@ use crate::{
     },
 };
 
-const SHUTDOWN_TIMEOUT: Duration = Duration::from_millis(1000);
+const SHUTDOWN_TIMEOUT: Duration = Duration::from_millis(10000);
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -38,7 +38,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     bench_same_thread_ping_pong().await?;
     bench_2_executors_ping_pong().await?;
     bench_infinite_loop_pending().await?;
-    //bench_infinite_loop_thread_sleep().await?;
     bench_virtual_actor_spawn_send_wait().await?;
     bench_virtual_ping_pong().await?;
 

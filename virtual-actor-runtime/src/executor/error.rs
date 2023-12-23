@@ -21,4 +21,7 @@ pub enum LocalExecutorError {
     /// Dispatcher wait error
     #[error("Dispatcher wait error {0}")]
     DispatcherWaitError(#[from] crate::utils::waiter::WaitError),
+    /// Unable to start thread
+    #[error("Unable to spawn thread {0:?}")]
+    ThreadSpawnError(std::io::Error),
 }

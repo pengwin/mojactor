@@ -1,17 +1,14 @@
 //! Runtime context for actor.
 
-use std::sync::Arc;
-
 use tokio_util::sync::CancellationToken;
 use virtual_actor::{Actor, ActorAddr, ActorContext, VirtualActor};
 
 use crate::{
     address::{LocalAddr, VirtualAddr},
-    runtime::{ActivateActorError, ActorRegistry},
+    runtime::{ActivateActorError, WeakActorRegistry},
+    utils::cancellation_token_wrapper::CancellationTokenWrapper,
     WeakLocalAddr,
 };
-
-use super::cancellation_token_wrapper::CancellationTokenWrapper;
 
 /// Runtime context for actor.
 pub struct RuntimeContext<A: Actor> {
@@ -22,12 +19,12 @@ pub struct RuntimeContext<A: Actor> {
     /// Mailbox cancellation token
     mailbox_cancellation_token: CancellationToken,
     /// Actor registry
-    registry: Arc<ActorRegistry>,
+    registry: WeakActorRegistry,
 }
 
 impl<A: Actor> RuntimeContext<A> {
     pub(crate) fn new(
-        registry: Arc<ActorRegistry>,
+        registry: WeakActorRegistry,
         self_addr_weak: WeakLocalAddr<A>,
         mailbox_cancellation_token: &CancellationToken,
         cancellation_token: &CancellationToken,

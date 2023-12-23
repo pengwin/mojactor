@@ -1,8 +1,8 @@
-use std::{marker::PhantomData, sync::Arc};
+use std::marker::PhantomData;
 
 use virtual_actor::{Actor, ActorContext};
 
-use crate::{address::ActorHandle, runtime::ActorRegistry, LocalAddr, WeakLocalAddr};
+use crate::{address::ActorHandle, runtime::WeakActorRegistry, LocalAddr, WeakLocalAddr};
 
 use super::{context_factory_trait::ActorContextFactory, runtime_context::RuntimeContext};
 
@@ -11,13 +11,13 @@ pub struct RuntimeContextFactory<A: Actor> {
     /// Phantom data
     _a: PhantomData<fn(A) -> A>,
     /// Actor registry
-    registry: Arc<ActorRegistry>,
+    registry: WeakActorRegistry,
 }
 
 impl<A: Actor> RuntimeContextFactory<A> {
     /// Creates new runtime context factory
     #[must_use]
-    pub fn new(registry: Arc<ActorRegistry>) -> Self {
+    pub fn new(registry: WeakActorRegistry) -> Self {
         Self {
             _a: PhantomData,
             registry,

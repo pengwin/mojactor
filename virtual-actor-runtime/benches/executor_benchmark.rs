@@ -28,6 +28,7 @@ fn create_executor(runtime: &mut Runtime) -> Result<ExecutorHandle, Box<dyn std:
             enable_time: false,
             thread_stack_size: None,
         },
+        thread_name: "benchmark".to_string(),
         ..Default::default()
     })?;
 

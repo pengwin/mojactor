@@ -162,14 +162,19 @@ impl LocalExecutor {
     ) -> Result<JoinHandle<()>, LocalExecutorError> {
         let rt = Self::build_runtime(&executor_preferences.tokio_runtime_preferences)?;
 
-        let handle = std::thread::spawn(move || {
-            let local = LocalSetWrapper::new();
+        let thread_builder =
+            std::thread::Builder::new().name(executor_preferences.thread_name.clone());
 
-            local.spawn_local(spawner.run());
+        let handle = thread_builder
+            .spawn(move || {
+                let local = LocalSetWrapper::new();
 
-            local.run(&rt, &local_set_stopped, &local_set_cancellation);
-            thread_stopped.notify_one();
-        });
+                local.spawn_local(spawner.run());
+
+                local.run(&rt, &local_set_stopped, &local_set_cancellation);
+                thread_stopped.notify_one();
+            })
+            .map_err(LocalExecutorError::ThreadSpawnError)?;
 
         Ok(handle)
     }
