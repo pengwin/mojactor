@@ -88,8 +88,9 @@ where
         let task_ct = handle.cancellation_token();
         while let Some(envelope) = mailbox.recv(task_ct).await {
             select! {
-                r = actor.handle_envelope(envelope, &context) => r.map_err(ActorTaskError::ResponderError),
+                biased;
                 () = task_ct.cancelled() => Err(ActorTaskError::Cancelled),
+                r = actor.handle_envelope(envelope, &context) => r.map_err(ActorTaskError::ResponderError),
             }?;
             self.processed_msg_counter.increment();
         }

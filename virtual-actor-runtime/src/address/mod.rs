@@ -8,3 +8,4 @@ pub use actor_handle::{ActorHandle, ActorTask};
 pub use local_addr::{LocalAddr, LocalAddrError};
 pub use virtual_addr::VirtualAddr;
 pub use weak_local_addr::WeakLocalAddr;
+pub use weak_virtual_addr::WeakVirtualAddr;

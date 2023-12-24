@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use tokio_util::sync::CancellationToken;
 use virtual_actor::{Actor, LocalActor, MessageHandler, VirtualActor};
 
 use crate::runtime::{
@@ -12,6 +13,7 @@ use super::{
 };
 
 pub struct HousekeepingActor<A: VirtualActor> {
+    pub(super) graceful_cancellation: CancellationToken,
     pub(super) cache: ActorsCache<A>,
     pub(super) preferences: Arc<RuntimePreferences>,
     pub(super) actor_counters: ActorCountersMap<A>,

@@ -87,8 +87,11 @@ impl<A: VirtualActor> ActorActivator<A> {
         CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
     {
         let cache = ActorsCache::new();
-        let housekeeping_actor_factory =
-            Arc::new(HousekeepingActorFactory::new(cache.clone(), &preferences));
+        let housekeeping_actor_factory = Arc::new(HousekeepingActorFactory::new(
+            housekeeping_executor.mailbox_cancellation().child_token(),
+            cache.clone(),
+            &preferences,
+        ));
         let context_cancellation = housekeeping_executor.executor_cancellation().child_token();
         let housekeeping_context_factory =
             HousekeepingContextFactory::<<AF as ActorFactory>::Actor>::new(context_cancellation);

@@ -58,6 +58,7 @@ impl<T> Mailbox<T> {
     async fn recv_with_mailbox_ct(&mut self, ct: &CancellationToken) -> Option<T> {
         let mailbox_ct = self.receiver_cancellation.clone();
         select! {
+            biased;
             () = mailbox_ct.cancelled() => {
                 self.receiver.close();
                 self.closed = true;
@@ -71,6 +72,7 @@ impl<T> Mailbox<T> {
     /// to interrupt waiting for message
     async fn recv_with_ct(&mut self, ct: &CancellationToken) -> Option<T> {
         select! {
+            biased;
             () = ct.cancelled() => None,
             envelope = self.receiver.recv() => envelope,
         }

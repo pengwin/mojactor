@@ -6,8 +6,6 @@ pub struct TokioRuntimePreferences {
     pub enable_io: bool,
     /// Enable time
     pub enable_time: bool,
-    /// The stack size (in bytes) for executor threads.
-    pub thread_stack_size: Option<usize>,
 }
 
 impl Default for TokioRuntimePreferences {
@@ -15,7 +13,6 @@ impl Default for TokioRuntimePreferences {
         Self {
             enable_io: true,
             enable_time: true,
-            thread_stack_size: None,
         }
     }
 }
@@ -24,6 +21,8 @@ impl Default for TokioRuntimePreferences {
 pub struct ExecutorPreferences {
     /// Executor thread name
     pub thread_name: String,
+    /// The stack size (in bytes) for executor threads.
+    pub thread_stack_size: Option<usize>,
     /// Mailbox preferences
     pub mailbox_preferences: MailboxPreferences,
     /// Tokio runtime preferences
@@ -34,6 +33,7 @@ impl Default for ExecutorPreferences {
     fn default() -> Self {
         Self {
             thread_name: "local-executor".to_string(),
+            thread_stack_size: None,
             mailbox_preferences: MailboxPreferences { size: 1024 },
             tokio_runtime_preferences: TokioRuntimePreferences::default(),
         }

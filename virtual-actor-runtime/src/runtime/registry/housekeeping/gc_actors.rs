@@ -5,9 +5,7 @@ use virtual_actor::{
     WeakActorAddr,
 };
 
-use crate::{
-    utils::cancellation_token_wrapper::CancellationTokenWrapper, GracefulShutdown, WaitError,
-};
+use crate::{utils::cancellation_token_wrapper::CancellationTokenWrapper, GracefulShutdown};
 
 use super::HousekeepingActor;
 
@@ -69,12 +67,18 @@ impl<A: VirtualActor> MessageHandler<GarbageCollectActors> for HousekeepingActor
         let addr = ctx.self_addr().clone();
         let cancellation_token = ctx.cancellation_token().clone();
         let interval = self.preferences.garbage_collect_interval;
+        let graceful_cancellation = self.graceful_cancellation.clone();
         tokio::task::spawn_local(async move {
-            if let Err(e) = sleep_with_cancel(interval, &cancellation_token).await {
-                eprintln!("Failed to wait for interval: {e:?}");
+            if let Err(e) =
+                sleep_with_cancel(interval, &graceful_cancellation, &cancellation_token).await
+            {
+                if let SleepWaitError::Cancelled = e {
+                    eprintln!(
+                        "Failed to sleep for {interval:?} on Housekeeping::{actor_name}: {e:?}"
+                    );
+                }
                 return;
             }
-            tokio::time::sleep(interval).await;
             if let Some(addr) = addr.upgrade() {
                 addr.dispatch(GarbageCollectActors)
                     .await
@@ -84,12 +88,21 @@ impl<A: VirtualActor> MessageHandler<GarbageCollectActors> for HousekeepingActor
     }
 }
 
+#[derive(Debug)]
+enum SleepWaitError {
+    GracefullyCancelled,
+    Cancelled,
+}
+
 async fn sleep_with_cancel(
     duration: Duration,
+    graceful_cancellation: &tokio_util::sync::CancellationToken,
     cancellation: &CancellationTokenWrapper,
-) -> Result<(), WaitError> {
+) -> Result<(), SleepWaitError> {
     tokio::select! {
-        () = cancellation.cancelled()  => Err(WaitError::Cancelled("Sleep cancelled".to_owned())),
+        biased;
+        () = graceful_cancellation.cancelled() => Err(SleepWaitError::GracefullyCancelled),
+        () = cancellation.cancelled()  => Err(SleepWaitError::Cancelled),
         () = tokio::time::sleep(duration) => Ok(()),
     }
 }

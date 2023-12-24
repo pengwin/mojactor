@@ -4,6 +4,7 @@ use crate::runtime::{ActorActivator, WeakActorActivator};
 
 use super::virtual_addr::VirtualAddr;
 
+/// Weak reference to `VirtualAddr`
 pub struct WeakVirtualAddr<A: VirtualActor> {
     id: A::ActorId,
     weak: WeakActorActivator<A>,

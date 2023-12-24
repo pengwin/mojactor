@@ -30,8 +30,9 @@ pub async fn waiter(
         }
     };
     select! {
+        biased;
+        () = cancellation => Err(WaitError::Cancelled(name.to_owned())),
         () = notify.notified() => Ok(()),
         () = tokio::time::sleep(timeout) => Err(WaitError::Timeout(name.to_owned())),
-        () = cancellation => Err(WaitError::Cancelled(name.to_owned())),
     }
 }

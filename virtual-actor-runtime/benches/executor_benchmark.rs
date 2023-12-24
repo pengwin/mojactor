@@ -3,8 +3,6 @@
 #![allow(missing_docs)]
 #![allow(clippy::missing_errors_doc)]
 
-use std::sync::Arc;
-
 use bench_actor::{AksMessage, BenchActor, DispatchMessage, EchoMessage};
 use criterion::{criterion_group, criterion_main, Criterion};
 use virtual_actor::ActorAddr;
@@ -26,7 +24,6 @@ fn create_executor(runtime: &mut Runtime) -> Result<ExecutorHandle, Box<dyn std:
         tokio_runtime_preferences: TokioRuntimePreferences {
             enable_io: false,
             enable_time: false,
-            thread_stack_size: None,
         },
         thread_name: "benchmark".to_string(),
         ..Default::default()

@@ -45,7 +45,6 @@ impl Runtime {
             tokio_runtime_preferences: TokioRuntimePreferences {
                 enable_io: false,
                 enable_time: true,
-                ..Default::default()
             },
             thread_name: "housekeeping-executor".to_string(),
             ..Default::default()

@@ -203,8 +203,9 @@ impl<A: Actor> ActorHandle<A> {
             .get()
             .ok_or(LocalAddrError::ActorNotReady)?;
         select! {
-            res = dispatcher.send(msg) => res.map_err(LocalAddrError::dispatcher_error),
+            biased;
             () = self.inner.execution_cancellation.cancelled() => Err(LocalAddrError::Stopped),
+            res = dispatcher.send(msg) => res.map_err(LocalAddrError::dispatcher_error),
         }
     }
 

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use tokio_util::sync::CancellationToken;
 use virtual_actor::{ActorFactory, LocalActorFactory, VirtualActor};
 
 use crate::runtime::{
@@ -9,13 +10,19 @@ use crate::runtime::{
 use super::{actor_counters_map::ActorCountersMap, HousekeepingActor};
 
 pub struct HousekeepingActorFactory<A: VirtualActor> {
+    graceful_cancellation: CancellationToken,
     cache: ActorsCache<A>,
     preferences: Arc<RuntimePreferences>,
 }
 
 impl<A: VirtualActor> HousekeepingActorFactory<A> {
-    pub fn new(cache: ActorsCache<A>, preferences: &Arc<RuntimePreferences>) -> Self {
+    pub fn new(
+        graceful_cancellation: CancellationToken,
+        cache: ActorsCache<A>,
+        preferences: &Arc<RuntimePreferences>,
+    ) -> Self {
         Self {
+            graceful_cancellation,
             cache,
             preferences: preferences.clone(),
         }
@@ -31,6 +38,7 @@ impl<A: VirtualActor> LocalActorFactory for HousekeepingActorFactory<A> {
 
     async fn create_actor(&self) -> Result<HousekeepingActor<A>, Self::Error> {
         Ok(HousekeepingActor {
+            graceful_cancellation: self.graceful_cancellation.clone(),
             cache: self.cache.clone(),
             preferences: self.preferences.clone(),
             actor_counters: ActorCountersMap::new(),

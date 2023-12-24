@@ -25,6 +25,8 @@ type ThreadHandle = std::thread::JoinHandle<()>;
 
 /// Executor based on `tokio::task::LocalSet`
 pub struct LocalExecutor {
+    /// Name
+    name: String,
     /// Thread handle
     thread_handle: ThreadHandle,
     self_handle: Handle,
@@ -44,7 +46,7 @@ impl GracefulShutdown for LocalExecutor {
         // to ensure that no more actors will be spawned
         match self.spawner_gs.wait(timeout).await {
             Err(WaitError::Timeout(w)) => {
-                eprintln!("{w} wait timeout");
+                eprintln!("{w} wait timeout on {}", self.name);
                 self.spawner_gs.shutdown();
                 // wait for spawn task to finish
                 // to ensure that no actors will be spawned
@@ -59,7 +61,7 @@ impl GracefulShutdown for LocalExecutor {
         match self.local_set_gs.wait(timeout).await {
             Ok(()) => Ok(()),
             Err(WaitError::Timeout(w)) => {
-                eprintln!("{w} wait timeout");
+                eprintln!("{w} wait timeout on {}", self.name);
                 // if local set is not finished, then shutdown actor execution
                 self.self_handle.executor_cancellation().cancel();
                 Ok(())
@@ -88,6 +90,7 @@ impl LocalExecutor {
     /// Returns error if executor thread is not started
     /// Returns error if spawner was not send
     pub fn new(preferences: &ExecutorPreferences) -> Result<Self, LocalExecutorError> {
+        let name = preferences.thread_name.clone();
         let executor_cancellation = CancellationToken::new();
         let mailbox_cancellation = CancellationToken::new();
 
@@ -123,6 +126,7 @@ impl LocalExecutor {
         );
 
         Ok(Self {
+            name,
             thread_handle,
             self_handle,
             spawner_gs,
@@ -162,16 +166,19 @@ impl LocalExecutor {
     ) -> Result<JoinHandle<()>, LocalExecutorError> {
         let rt = Self::build_runtime(&executor_preferences.tokio_runtime_preferences)?;
 
-        let thread_builder =
+        let mut thread_builder =
             std::thread::Builder::new().name(executor_preferences.thread_name.clone());
+
+        if let Some(stack_size) = executor_preferences.thread_stack_size {
+            thread_builder = thread_builder.stack_size(stack_size);
+        }
 
         let handle = thread_builder
             .spawn(move || {
                 let local = LocalSetWrapper::new();
-
                 local.spawn_local(spawner.run());
-
                 local.run(&rt, &local_set_stopped, &local_set_cancellation);
+
                 thread_stopped.notify_one();
             })
             .map_err(LocalExecutorError::ThreadSpawnError)?;
@@ -187,9 +194,11 @@ impl LocalExecutor {
         if preferences.enable_time {
             builder.enable_time();
         }
+        /* Disabled since it's current thread runtime
         if let Some(stack_size) = preferences.thread_stack_size {
             builder.thread_stack_size(stack_size);
         }
+        */
         let rt = builder.build()?;
         Ok(rt)
     }

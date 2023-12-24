@@ -22,7 +22,7 @@ lint:
 	cargo clippy --all-features -- -D clippy::unwrap_used -W missing_docs -W clippy::pedantic -W clippy::cargo -A clippy::cargo_common_metadata -A clippy::module_name_repetitions
 
 test: lint
-	cargo test --all-features
+	cargo test --all-features -- --nocapture
 
 bench: lint
 	cargo bench

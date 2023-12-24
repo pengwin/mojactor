@@ -13,6 +13,7 @@ pub enum VirtualAddrError {
     LocalAddrError(#[from] LocalAddrError),
 }
 
+/// Virtual actor address
 pub struct VirtualAddr<A: VirtualActor> {
     id: A::ActorId,
     activator: ActorActivator<A>,

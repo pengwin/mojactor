@@ -42,10 +42,11 @@ impl LocalSetWrapper {
         cancellation_token: &CancellationToken,
     ) {
         select! {
-            () = self.local.inspect(move |()| { notify.notify_one(); }) => {},
+            biased;
             () = cancellation_token.cancelled() => {
                 eprintln!("Local set cancelled");
-            }
+            },
+            () = self.local.inspect(move |()| { notify.notify_one(); }) => {},
         }
     }
 }
