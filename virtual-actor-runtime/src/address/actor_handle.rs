@@ -4,11 +4,13 @@ use std::sync::{Arc, OnceLock, Weak};
 
 use tokio::{select, sync::Notify};
 use tokio_util::sync::CancellationToken;
-use virtual_actor::{Actor, Message, MessageEnvelopeFactory, MessageHandler};
+use virtual_actor::{
+    Actor, Message, MessageEnvelopeFactory, MessageHandler, MessageProcessingResult,
+};
 
 use crate::{
     executor::ActorTaskError,
-    messaging::MessageDispatcher,
+    messaging::{DispatcherError, MessageDispatcher},
     utils::{atomic_counter::AtomicCounter, GracefulShutdown},
     utils::{
         notify_once::NotifyOnce,
@@ -17,10 +19,25 @@ use crate::{
     LocalAddr,
 };
 
-use super::local_addr::LocalAddrError;
+use super::{
+    actor_task_container::{ActorTaskContainer, ActorTaskContainerError},
+    local_addr::LocalAddrError,
+    ActorTask,
+};
 
-pub type ActorTask = tokio::task::JoinHandle<Result<(), ActorTaskError>>;
-pub type ActorTaskContainer = Arc<OnceLock<ActorTask>>;
+/// Actor start error
+#[derive(thiserror::Error, Debug)]
+pub enum ActorStartError {
+    /// Start wait error
+    #[error("Start wait error: {0:?}")]
+    WaitError(#[from] WaitError),
+    /// Actor task error
+    #[error("ActorTaskError: {0:?}")]
+    ActorTaskError(#[from] ActorTaskError),
+    /// Unexpected state
+    #[error("Unexpected state {0}")]
+    UnexpectedState(String),
+}
 
 pub struct WeakActorHandle<A: Actor> {
     inner: Weak<ActorInner<A>>,
@@ -45,6 +62,8 @@ struct ActorInner<A: Actor> {
     dispatcher: Arc<OnceLock<MessageDispatcher<A>>>,
     /// Dispatcher ready notify
     dispatcher_ready: Arc<Notify>,
+    /// Actor started
+    actor_started: Arc<NotifyOnce>,
     /// Actor stopped
     actor_stopped: Arc<NotifyOnce>,
     /// Actor execution cancellation token
@@ -112,13 +131,14 @@ impl<A: Actor> ActorHandle<A> {
         Self {
             inner: Arc::new(ActorInner {
                 dispatcher,
+                actor_started: Arc::new(NotifyOnce::new()),
                 actor_stopped: Arc::new(NotifyOnce::new()),
                 dispatcher_ready: Arc::new(Notify::new()),
                 execution_cancellation,
                 mailbox_cancellation,
                 dispatched_msg_counter,
                 processed_msg_counter: AtomicCounter::default(),
-                actor_task: Arc::new(OnceLock::new()),
+                actor_task: ActorTaskContainer::default(),
             }),
         }
     }
@@ -138,14 +158,8 @@ impl<A: Actor> ActorHandle<A> {
     }
 
     /// Set actor task
-    pub(crate) fn set_task(&self, task: ActorTask) -> Result<(), &'static str> {
-        match self.inner.actor_task.set(task) {
-            Ok(()) => {
-                // TODO: notify task started
-                Ok(())
-            }
-            Err(_) => Err("Actor task already set"),
-        }
+    pub(crate) fn set_task(&self, task: ActorTask) -> Result<(), ActorTaskContainerError> {
+        self.inner.actor_task.set(task)
     }
 
     pub(crate) fn processed_msg_counter(&self) -> &AtomicCounter {
@@ -166,9 +180,12 @@ impl<A: Actor> ActorHandle<A> {
         &self.inner.mailbox_cancellation
     }
 
-    /// Clone notify
     pub(crate) fn stop_notify(&self) -> &Arc<NotifyOnce> {
         &self.inner.actor_stopped
+    }
+
+    pub(crate) fn start_notify(&self) -> &Arc<NotifyOnce> {
+        &self.inner.actor_started
     }
 
     /// Is finished
@@ -176,15 +193,75 @@ impl<A: Actor> ActorHandle<A> {
         self.inner.actor_stopped.is_notified()
     }
 
+    /// Wait for actor to be ready
+    pub async fn wait_for_ready(
+        &self,
+        timeout: std::time::Duration,
+    ) -> Result<(), ActorStartError> {
+        if self.inner.actor_started.is_notified() {
+            return Ok(());
+        }
+
+        self.wait_for_dispatcher(timeout).await?;
+        self.wait_for_start(timeout).await
+    }
+
     /// Wait for dispatcher to be set
-    pub async fn wait_for_dispatcher(&self, timeout: std::time::Duration) -> Result<(), WaitError> {
+    async fn wait_for_dispatcher(&self, timeout: std::time::Duration) -> Result<(), WaitError> {
         waiter(
             "wait_for_dispatcher",
             &self.inner.dispatcher_ready,
             timeout,
-            Some(&self.inner.execution_cancellation),
+            Some(&self.inner.mailbox_cancellation),
         )
         .await
+    }
+
+    /// Wait for actor to be started
+    async fn wait_for_start(&self, timeout: std::time::Duration) -> Result<(), ActorStartError> {
+        let name = "wait_for_start".to_owned();
+        let res = select! {
+            biased;
+            () = self.inner.mailbox_cancellation.cancelled() => Err(WaitError::Cancelled(name.clone())),
+            () = self.inner.actor_started.wait_for_notify() => Ok(true),
+            () = self.inner.actor_stopped.wait_for_notify() => Ok(false),
+            () = tokio::time::sleep(timeout) => Err(WaitError::Timeout(name)),
+        }?;
+
+        if res {
+            return Ok(());
+        }
+
+        let task_error = self
+            .extract_task_error()
+            .await
+            .map_err(|e| ActorStartError::UnexpectedState(e.message))?;
+
+        if let Some(error) = task_error {
+            return Err(ActorStartError::ActorTaskError(error));
+        }
+
+        Err(ActorStartError::UnexpectedState(
+            "Actor task is not set or doesn't have errors".to_owned(),
+        ))
+    }
+
+    pub async fn extract_task_error(
+        &self,
+    ) -> Result<Option<ActorTaskError>, ActorTaskContainerError> {
+        let task = self.inner.actor_task.take()?;
+
+        if let Some(task) = task {
+            return match task.await {
+                Ok(res) => match res {
+                    Ok(()) => Ok(None),
+                    Err(e) => Ok(Some(e)),
+                },
+                Err(e) => Ok(Some(ActorTaskError::TaskJoinError(e))),
+            };
+        }
+
+        Ok(None)
     }
 
     /// Impl for trait
@@ -204,8 +281,8 @@ impl<A: Actor> ActorHandle<A> {
             .ok_or(LocalAddrError::ActorNotReady)?;
         select! {
             biased;
-            () = self.inner.execution_cancellation.cancelled() => Err(LocalAddrError::Stopped),
-            res = dispatcher.send(msg) => res.map_err(LocalAddrError::dispatcher_error),
+            () = self.inner.mailbox_cancellation.cancelled() => Err(LocalAddrError::Stopped),
+            res = dispatcher.send(msg) => Self::map_actor_response::<M>(res),
         }
     }
 
@@ -234,7 +311,7 @@ impl<A: Actor> ActorHandle<A> {
 
         dispatcher
             .dispatch(msg)
-            .map_err(LocalAddrError::dispatcher_error)
+            .map_err(LocalAddrError::DispatcherError)
     }
 
     /// Checks if actor is cancelled
@@ -251,6 +328,18 @@ impl<A: Actor> ActorHandle<A> {
     pub fn weak_ref(&self) -> WeakActorHandle<A> {
         WeakActorHandle {
             inner: Arc::downgrade(&self.inner),
+        }
+    }
+
+    fn map_actor_response<M: Message>(
+        res: Result<MessageProcessingResult<M>, DispatcherError>,
+    ) -> Result<M::Result, LocalAddrError> {
+        match res {
+            Ok(r) => match r {
+                Ok(res) => Ok(res),
+                Err(err) => Err(LocalAddrError::MessageProcessingError(err)),
+            },
+            Err(err) => Err(LocalAddrError::DispatcherError(err)),
         }
     }
 }

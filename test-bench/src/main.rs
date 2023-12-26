@@ -11,8 +11,9 @@ use std::time::{Duration, Instant};
 
 use futures::StreamExt;
 use tokio_util::codec::{FramedRead, LinesCodec};
+use virtual_actor_runtime::errors::WaitError;
+use virtual_actor_runtime::GracefulShutdown;
 use virtual_actor_runtime::{prelude::*, LocalAddr};
-use virtual_actor_runtime::{GracefulShutdown, WaitError};
 
 use crate::{
     hello_actor::{HelloActor, HelloMessage},
@@ -26,14 +27,14 @@ const SHUTDOWN_TIMEOUT: Duration = Duration::from_millis(10000);
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    //test_qwe().await?;
-    bench_send_wait().await?;
+    test_qwe().await?;
+    /*bench_send_wait().await?;
     bench_spawn_wait_shutdown().await?;
     bench_same_thread_ping_pong().await?;
     bench_2_executors_ping_pong().await?;
     bench_infinite_loop_pending().await?;
     bench_virtual_actor_spawn_send_wait().await?;
-    bench_virtual_ping_pong().await?;
+    bench_virtual_ping_pong().await?;*/
 
     Ok(())
 }

@@ -4,6 +4,7 @@ use tokio::select;
 use virtual_actor::{Actor, ActorContext, ActorFactory, VirtualActor, VirtualActorFactory};
 
 use crate::utils::atomic_counter::AtomicCounter;
+use crate::utils::notify_once::NotifyOnce;
 use crate::{address::ActorHandle, context::ActorContextFactory, LocalAddr};
 
 use super::mailbox::Mailbox;
@@ -74,6 +75,7 @@ where
     async fn actor_loop(
         self,
         mut mailbox: Mailbox<<AF as ActorFactory>::Actor>,
+        actor_started: Arc<NotifyOnce>,
         actor_factory: Arc<AF>,
         context_factory: Arc<CF>,
         handle: ActorHandle<<AF as ActorFactory>::Actor>,
@@ -84,8 +86,10 @@ where
             .map_err(ActorTaskError::actor_factory_error)?;
 
         let context = context_factory.create_context(&handle);
-
         let task_ct = handle.cancellation_token();
+
+        actor_started.notify();
+
         while let Some(envelope) = mailbox.recv(task_ct).await {
             select! {
                 biased;

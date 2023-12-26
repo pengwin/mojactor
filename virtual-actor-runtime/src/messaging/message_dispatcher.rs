@@ -3,7 +3,9 @@
 use std::sync::Arc;
 
 use tokio::sync::mpsc::error::TrySendError;
-use virtual_actor::{Actor, Message, MessageEnvelopeFactory, MessageHandler};
+use virtual_actor::{
+    Actor, Message, MessageEnvelopeFactory, MessageHandler, MessageProcessingResult,
+};
 
 use crate::utils::atomic_counter::AtomicCounter;
 
@@ -13,10 +15,10 @@ use super::{mailbox::MailboxDispatcher, one_shot_responder::OneshotResponder, Ma
 #[derive(thiserror::Error, Debug)]
 pub enum DispatcherError {
     /// Mailbox send error
-    #[error("Mailbox error: {0}")]
+    #[error("Mailbox error: {0:?}")]
     MailBoxError(#[from] MailboxError),
     /// Response receiver error
-    #[error("Response receiver error: {0}")]
+    #[error("Response receiver error: {0:?}")]
     ResponseReceiverError(#[from] tokio::sync::oneshot::error::RecvError),
 }
 
@@ -58,7 +60,7 @@ impl<A: Actor> MessageDispatcher<A> {
 
 impl<A: Actor> MessageDispatcher<A> {
     /// Sends message to actor and waits for response
-    pub async fn send<M>(&self, msg: M) -> Result<<M as Message>::Result, DispatcherError>
+    pub async fn send<M>(&self, msg: M) -> Result<MessageProcessingResult<M>, DispatcherError>
     where
         M: Message,
         A: MessageHandler<M>,

@@ -1,23 +1,24 @@
 //! Implements responder based on tokio oneshot channel
 
-use virtual_actor::{Message, Responder, ResponderError};
+use tokio::sync::oneshot::{channel, Receiver, Sender};
+use virtual_actor::{Message, MessageProcessingResult, Responder, ResponderError};
 
 /// `Responder` based on tokio oneshot channel
 pub struct OneshotResponder<M: Message> {
     /// Tokio oneshot channel sender
-    sender: Option<tokio::sync::oneshot::Sender<<M as Message>::Result>>,
+    sender: Option<Sender<MessageProcessingResult<M>>>,
 }
 
 impl<M: Message> OneshotResponder<M> {
     /// Create new `OneshotResponder` and return `Receiver` to wait for response
-    pub fn new() -> (Self, tokio::sync::oneshot::Receiver<<M as Message>::Result>) {
-        let (tx, rx) = tokio::sync::oneshot::channel();
+    pub fn new() -> (Self, Receiver<MessageProcessingResult<M>>) {
+        let (tx, rx) = channel();
         (Self { sender: Some(tx) }, rx)
     }
 }
 
 impl<M: Message> Responder<M> for OneshotResponder<M> {
-    fn respond(&mut self, response: <M as Message>::Result) -> Result<(), ResponderError> {
+    fn respond(&mut self, response: MessageProcessingResult<M>) -> Result<(), ResponderError> {
         let tx = self.sender.take().ok_or(ResponderError::AlreadyRespond(
             "OneshotResponder already respond",
         ))?;

@@ -76,10 +76,16 @@ where
     ) -> Result<(), ActorTaskError> {
         match result {
             Ok(r) => r,
-            Err(e) => match e.downcast_ref::<&str>() {
-                Some(s) => Err(ActorTaskError::ActorPanic((*s).to_string())),
-                None => Err(ActorTaskError::ActorPanic("Unknown panic".to_string())),
-            },
+            Err(e) => {
+                if let Some(s) = e.downcast_ref::<&str>() {
+                    Err(ActorTaskError::ActorPanic((*s).to_string()))
+                } else if let Some(s) = e.downcast_ref::<String>() {
+                    Err(ActorTaskError::ActorPanic(s.clone()))
+                } else {
+                    let text = format!("Unknown panic {e:?}");
+                    Err(ActorTaskError::ActorPanic(text))
+                }
+            }
         }
     }
 
@@ -97,6 +103,7 @@ where
         tokio::task::spawn_local(
             AssertUnwindSafe(actor_loop.actor_loop(
                 mailbox,
+                handle.start_notify().clone(),
                 self.actor_factory.clone(),
                 self.context_factory.clone(),
                 handle.clone(),
@@ -130,9 +137,7 @@ where
 
         let task = self.spawn_actor(mailbox);
 
-        self.handle
-            .set_task(task)
-            .map_err(ActorSpawnError::ActorTaskAlreadySet)?;
+        self.handle.set_task(task)?;
 
         Ok(())
     }

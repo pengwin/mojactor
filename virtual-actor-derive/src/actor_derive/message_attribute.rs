@@ -90,7 +90,7 @@ impl MessageAttribute {
         quote_spanned! {
             indent.span() =>
             Self::MessagesEnvelope::#name(msg, responder) => {
-                    let result = self.handle(msg, ctx).await;
+                    let result = self.handle_with_catch(msg, ctx).await;
                     if let Some(mut responder) = responder {
                         responder.respond(result)?;
                     }

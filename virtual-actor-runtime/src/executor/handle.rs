@@ -205,7 +205,7 @@ impl Handle {
         ),
     {
         let handle = self.spawn_actor_no_wait(actor_factory, context_factory, spawner)?;
-        handle.wait_for_dispatcher(timeout).await?;
+        handle.wait_for_ready(timeout).await?;
         Ok(handle)
     }
 }

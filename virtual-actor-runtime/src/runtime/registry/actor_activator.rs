@@ -9,11 +9,12 @@ use virtual_actor::{
 };
 
 use crate::{
-    address::{ActorHandle, LocalAddrError},
+    address::{ActorHandle, ActorStartError, LocalAddrError},
     context::ActorContextFactory,
+    errors::WaitError,
     executor::{Handle, LocalExecutorError},
     runtime::runtime_preferences::RuntimePreferences,
-    ExecutorHandle, LocalAddr, WaitError,
+    ExecutorHandle, LocalAddr,
 };
 
 use super::{
@@ -26,21 +27,32 @@ use super::{
 };
 
 #[derive(Debug, thiserror::Error)]
+#[allow(clippy::enum_variant_names)]
 pub enum StartHousekeepingError {
     #[error("WaitDispatcherError {0:?}")]
     WaitDispatcherError(#[from] WaitError),
     #[error("StartGarbageCollectError {0:?}")]
     StartGarbageCollectError(#[from] LocalAddrError),
+    /// Actor start error
+    #[error("Actor start error {0:?}")]
+    ActorStartError(#[from] ActorStartError),
 }
 
+/// Actor spawn error
 #[derive(Debug, thiserror::Error)]
 pub enum ActorSpawnError {
+    /// Start housekeeping error
     #[error("StartHousekeepingError {0:?}")]
     StartHousekeeping(#[from] StartHousekeepingError),
+    /// Wait dispatcher error
     #[error("WaitDispatcherError {0:?}")]
     WaitDispatcher(#[from] WaitError),
+    /// Executor error
     #[error("ExecutorError {0:?}")]
     ExecutorError(#[from] LocalExecutorError),
+    /// Actor start error
+    #[error("Actor start error {0:?}")]
+    ActorStartError(#[from] ActorStartError),
 }
 
 pub struct ActorActivator<A: VirtualActor> {
@@ -128,7 +140,7 @@ impl<A: VirtualActor> ActorActivator<A> {
         self.start_housekeeping().await?;
         let handle = self.inner.registration.spawn_no_wait(id.clone())?;
         handle
-            .wait_for_dispatcher(self.inner.preferences.actor_activation_timeout)
+            .wait_for_ready(self.inner.preferences.actor_activation_timeout)
             .await?;
         self.inner.cache.insert(id.clone(), handle.clone());
         Ok(handle)
@@ -148,7 +160,7 @@ impl<A: VirtualActor> ActorActivator<A> {
 
         self.inner
             .housekeeping_actor
-            .wait_for_dispatcher(self.inner.preferences.actor_activation_timeout)
+            .wait_for_ready(self.inner.preferences.actor_activation_timeout)
             .await?;
 
         self.inner

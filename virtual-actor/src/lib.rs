@@ -1,6 +1,7 @@
 //! Virtual actors traits and types
 
 pub mod names;
+pub mod utils;
 
 mod actor_addr;
 mod actor_context_trait;
@@ -11,6 +12,7 @@ mod cancellation_token_trait;
 mod mailbox_preferences;
 mod message_envelope_trait;
 mod message_handler_trait;
+mod message_processing_result;
 mod message_trait;
 mod responder_trait;
 
@@ -35,6 +37,7 @@ pub use local_actor_trait::LocalActor;
 pub use mailbox_preferences::MailboxPreferences;
 pub use message_envelope_trait::{MessageEnvelope, MessageEnvelopeFactory};
 pub use message_handler_trait::MessageHandler;
+pub use message_processing_result::{MessageProcessingError, MessageProcessingResult};
 pub use message_trait::Message;
 pub use responder_trait::Responder;
 pub use responder_trait::ResponderError;

@@ -1,12 +1,12 @@
 //! Responder trait for responders actor messages
 
-use crate::Message;
+use crate::{Message, MessageProcessingResult};
 
 /// Responder error
 #[derive(thiserror::Error, Debug)]
 pub enum ResponderError {
     /// Communication channel error
-    #[error("Responder channel {0}")]
+    #[error("ResponderChannelError {0:?}")]
     ChannelError(&'static str),
     /// Response was already used
     #[error("AlreadyRespond {0}")]
@@ -23,5 +23,5 @@ pub trait Responder<M: Message>: Send {
     ///
     /// Returns `ResponderError::AlreadyRespond` if response was already sent
     /// Returns `ResponderError::ChannelError` if communication reported an error
-    fn respond(&mut self, response: M::Result) -> Result<(), ResponderError>;
+    fn respond(&mut self, response: MessageProcessingResult<M>) -> Result<(), ResponderError>;
 }

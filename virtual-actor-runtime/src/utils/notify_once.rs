@@ -26,6 +26,10 @@ impl NotifyOnce {
         self.finished.store(true, Ordering::SeqCst);
     }
 
+    pub async fn wait_for_notify(&self) {
+        self.inner.notified().await;
+    }
+
     pub fn inner(&self) -> &Notify {
         &self.inner
     }

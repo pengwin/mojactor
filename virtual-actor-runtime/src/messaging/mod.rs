@@ -5,4 +5,4 @@ mod one_shot_responder;
 
 pub use mailbox::{Mailbox, MailboxDispatcher};
 pub use mailbox_error::MailboxError;
-pub use message_dispatcher::MessageDispatcher;
+pub use message_dispatcher::{DispatcherError, MessageDispatcher};

@@ -4,7 +4,9 @@ use std::future::Future;
 
 use virtual_actor::{Actor, ActorContext, ActorFactory};
 
-use crate::{address::ActorHandle, context::ActorContextFactory, LocalAddr};
+use crate::{
+    address::ActorHandle, context::ActorContextFactory, utils::notify_once::NotifyOnce, LocalAddr,
+};
 
 use super::{error::ActorTaskError, mailbox::Mailbox};
 
@@ -20,6 +22,7 @@ where
     fn actor_loop(
         self,
         mailbox: Mailbox<<AF as ActorFactory>::Actor>,
+        ctor_started: Arc<NotifyOnce>,
         actor_factory: Arc<AF>,
         context_factory: Arc<CF>,
         handle: ActorHandle<<AF as ActorFactory>::Actor>,

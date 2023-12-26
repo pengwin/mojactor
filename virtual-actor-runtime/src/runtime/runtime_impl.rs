@@ -8,6 +8,7 @@ use virtual_actor::{
 
 use crate::{
     address::VirtualAddr,
+    errors::WaitError,
     executor::{LocalExecutor, LocalExecutorError},
     ExecutorHandle, ExecutorPreferences, GracefulShutdown, LocalAddr, RuntimeContext,
     RuntimeContextFactory, TokioRuntimePreferences,
@@ -191,10 +192,7 @@ impl Runtime {
 }
 
 impl GracefulShutdown for Runtime {
-    async fn graceful_shutdown(
-        mut self,
-        timeout: std::time::Duration,
-    ) -> Result<(), crate::WaitError> {
+    async fn graceful_shutdown(mut self, timeout: std::time::Duration) -> Result<(), WaitError> {
         for executor in self.executors.drain(..) {
             executor.graceful_shutdown(timeout).await?;
         }

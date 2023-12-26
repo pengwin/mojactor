@@ -1,10 +1,15 @@
 //! `ActorAddr` implementation
 
-use virtual_actor::{Actor, ActorAddr, Message, MessageEnvelopeFactory, MessageHandler};
+use virtual_actor::{
+    Actor, ActorAddr, Message, MessageEnvelopeFactory, MessageHandler, MessageProcessingError,
+};
 
-use crate::{GracefulShutdown, WaitError};
+use crate::{errors::WaitError, messaging::DispatcherError, GracefulShutdown};
 
-use super::{actor_handle::ActorHandle, weak_local_addr::WeakLocalAddr};
+use super::{
+    actor_handle::{ActorHandle, ActorStartError},
+    weak_local_addr::WeakLocalAddr,
+};
 
 /// Actor handler error
 #[derive(thiserror::Error, Debug)]
@@ -16,18 +21,11 @@ pub enum LocalAddrError {
     #[error("Actor stopped")]
     Stopped,
     /// Dispatcher error
-    #[error("Dispatch error {0}")]
-    DispatcherError(Box<dyn std::error::Error + Send + Sync>),
-}
-
-impl LocalAddrError {
-    /// Creates new `LocalAddrError::DispatcherError`
-    pub fn dispatcher_error<E>(e: E) -> Self
-    where
-        E: std::error::Error + Send + Sync + 'static,
-    {
-        Self::DispatcherError(Box::new(e))
-    }
+    #[error("Dispatch error {0:?}")]
+    DispatcherError(#[from] DispatcherError),
+    /// Message processing error
+    #[error("Message processing error {0:?}")]
+    MessageProcessingError(#[from] MessageProcessingError),
 }
 
 /// Actor address
@@ -47,14 +45,17 @@ impl<A: Actor> LocalAddr<A> {
         }
     }
 
-    /// Wait for dispatcher to be set
+    /// Wait for actor to be ready
     ///
     /// # Errors
     ///
     /// Returns `WaitError::Timeout` if timeout is reached
     /// Returns `WaitError::Cancelled` if cancellation token is cancelled
-    pub async fn wait_for_dispatcher(&self, timeout: std::time::Duration) -> Result<(), WaitError> {
-        self.handle.wait_for_dispatcher(timeout).await
+    pub async fn wait_for_ready(
+        &self,
+        timeout: std::time::Duration,
+    ) -> Result<(), ActorStartError> {
+        self.handle.wait_for_ready(timeout).await
     }
 }
 

@@ -2,15 +2,23 @@ use virtual_actor::{ActorAddr, Message, MessageEnvelopeFactory, MessageHandler, 
 
 use crate::runtime::{ActorActivator, ActorSpawnError};
 
-use super::{weak_virtual_addr::WeakVirtualAddr, ActorHandle, LocalAddrError};
+use super::{
+    actor_task_container::ActorTaskContainerError, weak_virtual_addr::WeakVirtualAddr, ActorHandle,
+    LocalAddrError,
+};
 
 /// Actor handler error
 #[derive(thiserror::Error, Debug)]
 pub enum VirtualAddrError {
+    /// Actor spawn error
     #[error("ActorSpawnError {0:?}")]
     SpawnError(#[from] ActorSpawnError),
+    /// Dispatcher error
     #[error("LocalAddrError {0:?}")]
     LocalAddrError(#[from] LocalAddrError),
+    /// Actor task error
+    #[error("ActorTaskContainerError {0:?}")]
+    ActorTaskContainerError(#[from] ActorTaskContainerError),
 }
 
 /// Virtual actor address
@@ -46,9 +54,9 @@ impl<A: VirtualActor> ActorAddr<A> for VirtualAddr<A> {
         A::MessagesEnvelope: MessageEnvelopeFactory<A, M>,
     {
         let addr = self.get_addr().await?;
-        let res = addr.send(msg).await?;
-
-        Ok(res)
+        addr.send(msg)
+            .await
+            .map_err(VirtualAddrError::LocalAddrError)
     }
 
     async fn dispatch<M>(&self, msg: M) -> Result<(), Self::Error>

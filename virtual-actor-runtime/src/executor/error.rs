@@ -1,5 +1,7 @@
 //! Error for `LocalExecutor`
 
+use crate::address::ActorStartError;
+
 /// `LocalExecutor` errors
 #[derive(thiserror::Error, Debug)]
 pub enum LocalExecutorError {
@@ -10,18 +12,21 @@ pub enum LocalExecutorError {
     #[error("Executor thread not started")]
     ExecutorThreadNotStarted,
     /// Tokio runtime error
-    #[error("Runtime error {0}")]
+    #[error("Runtime error {0:?}")]
     RuntimeError(#[from] tokio::io::Error),
     /// Thread receive error
-    #[error("Thread receive error {0}")]
+    #[error("Thread receive error {0:?}")]
     ThreadReceiveError(#[from] std::sync::mpsc::RecvError),
     /// Spawner send error
     #[error("Spawner send error {0}")]
     SpawnerSendError(String),
     /// Dispatcher wait error
-    #[error("Dispatcher wait error {0}")]
+    #[error("Dispatcher wait error {0:?}")]
     DispatcherWaitError(#[from] crate::utils::waiter::WaitError),
     /// Unable to start thread
     #[error("Unable to spawn thread {0:?}")]
     ThreadSpawnError(std::io::Error),
+    /// Actor start error
+    #[error("Actor start error {0:?}")]
+    ActorStartError(#[from] ActorStartError),
 }

@@ -1,8 +1,9 @@
 //! Message handler trait
 
-use std::future::Future;
+use futures::{FutureExt, TryFutureExt};
+use std::{future::Future, panic::AssertUnwindSafe};
 
-use crate::Message;
+use crate::{utils::unwind_panic, Message, MessageProcessingError, MessageProcessingResult};
 
 use super::actor_trait::Actor;
 
@@ -15,6 +16,18 @@ pub trait MessageHandler<M: Message>: Actor {
         msg: M,
         ctx: &Self::ActorContext,
     ) -> impl Future<Output = <M as Message>::Result>;
+
+    /// Handles message envelope
+    fn handle_with_catch(
+        &mut self,
+        msg: M,
+        ctx: &Self::ActorContext,
+    ) -> impl Future<Output = MessageProcessingResult<M>> {
+        AssertUnwindSafe(self.handle(msg, ctx))
+            .catch_unwind()
+            .map(unwind_panic)
+            .map_err(MessageProcessingError::Panic)
+    }
 }
 
 #[cfg(test)]
@@ -23,8 +36,8 @@ mod tests {
 
     use crate::{
         actor_addr::ActorAddr, responder_trait::ResponderError, Actor, ActorContext,
-        CancellationToken, Message, MessageEnvelope, MessageEnvelopeFactory, Responder,
-        WeakActorAddr,
+        CancellationToken, Message, MessageEnvelope, MessageEnvelopeFactory,
+        MessageProcessingResult, Responder, WeakActorAddr,
     };
 
     use super::MessageHandler;
@@ -84,7 +97,7 @@ mod tests {
                 TestMessagesEnvelope::TestMessage(msg, responder) => {
                     let result = self.handle(msg, ctx).await;
                     if let Some(mut responder) = responder {
-                        responder.respond(result)?;
+                        responder.respond(Ok(result))?;
                     }
                 }
             }
@@ -117,9 +130,9 @@ mod tests {
     impl Responder<TestMessage> for TestResponder {
         fn respond(
             &mut self,
-            result: <TestMessage as Message>::Result,
+            result: MessageProcessingResult<TestMessage>,
         ) -> Result<(), ResponderError> {
-            assert_eq!(result, 42);
+            assert_eq!(result.expect("should be ok"), 42);
             Ok(())
         }
     }

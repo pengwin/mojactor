@@ -1,6 +1,9 @@
 //! Error produced by actor task
 
+use tokio::task::JoinError;
 use virtual_actor::ResponderError;
+
+use crate::address::ActorTaskContainerError;
 
 /// Error produced by actor task
 #[derive(Debug, thiserror::Error)]
@@ -17,6 +20,9 @@ pub enum ActorTaskError {
     /// Actor factory error
     #[error("Actor factory error {0:?}")]
     ActorFactoryError(Box<dyn std::error::Error + 'static + Send + Sync>),
+    /// Task join error
+    #[error("Task join error {0:?}")]
+    TaskJoinError(#[from] JoinError),
 }
 
 impl ActorTaskError {
@@ -33,6 +39,6 @@ pub enum ActorSpawnError {
     #[error("Dispatcher already set {0}")]
     DispatcherAlreadySet(&'static str),
     /// Actor task already set
-    #[error("Actor task already set {0}")]
-    ActorTaskAlreadySet(&'static str),
+    #[error("Actor task already set {0:?}")]
+    ActorTaskContainerError(#[from] ActorTaskContainerError),
 }

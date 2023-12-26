@@ -2,6 +2,7 @@
 
 mod address;
 mod context;
+mod error_handling;
 mod executor;
 mod messaging;
 mod runtime;
@@ -10,8 +11,15 @@ mod utils;
 pub use address::{LocalAddr, VirtualAddr, WeakLocalAddr, WeakVirtualAddr};
 pub use context::{RuntimeContext, RuntimeContextFactory};
 pub use executor::{ExecutorPreferences, Handle as ExecutorHandle, TokioRuntimePreferences};
-pub use utils::waiter::WaitError;
 pub use utils::GracefulShutdown;
+
+pub mod errors {
+    //! Virtual actor errors
+    pub use crate::address::{ActorStartError, LocalAddrError, VirtualAddrError};
+    pub use crate::executor::{ActorTaskError, LocalExecutorError};
+    pub use crate::runtime::ActorSpawnError;
+    pub use crate::utils::waiter::WaitError;
+}
 
 pub mod prelude {
     //! Virtual actor prelude

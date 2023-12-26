@@ -9,10 +9,10 @@ use tokio_util::sync::CancellationToken;
 #[derive(Debug, thiserror::Error)]
 pub enum WaitError {
     /// Wait timeout
-    #[error("Wait timeout: {0}")]
+    #[error("Wait timeout: {0:?}")]
     Timeout(String),
     /// Wait cancelled
-    #[error("Wait cancelled: {0}")]
+    #[error("Wait cancelled: {0:?}")]
     Cancelled(String),
 }
 

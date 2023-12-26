@@ -35,7 +35,7 @@ impl<A: VirtualActor> ActorCountersMap<A> {
         }
     }
 
-    /// Updates counters nd timestamp for actor with given id.
+    /// Updates counters and timestamp for actor with given id.
     /// If actor with given id is not present in map, it will be added.
     /// If actor with given id is present in map, but counters are the same, nothing will be changed.
     pub fn update(&mut self, actor_id: &A::ActorId, handle: &ActorHandle<A>) {
