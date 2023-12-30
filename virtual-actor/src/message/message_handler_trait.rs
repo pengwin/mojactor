@@ -3,9 +3,9 @@
 use futures::{FutureExt, TryFutureExt};
 use std::{future::Future, panic::AssertUnwindSafe};
 
-use crate::{
-    errors::MessageProcessingError, utils::unwind_panic, Actor, Message, MessageProcessingResult,
-};
+use crate::{actor::Actor, errors::MessageProcessingError, utils::unwind_panic};
+
+use super::{Message, MessageProcessingResult};
 
 /// Message Handler trait
 /// Responsible for handling specific message type
@@ -37,9 +37,12 @@ mod tests {
     use std::{cell::RefCell, rc::Rc};
 
     use crate::{
-        errors::ResponderError, utils::CancellationToken, Actor, ActorAddr, ActorContext,
-        ActorName, Message, MessageEnvelope, MessageEnvelopeFactory, MessageProcessingResult,
-        Responder, WeakActorAddr,
+        actor::{Actor, ActorAddr, ActorContext, ActorName, WeakActorAddr},
+        errors::ResponderError,
+        message::{
+            Message, MessageEnvelope, MessageEnvelopeFactory, MessageProcessingResult, Responder,
+        },
+        utils::CancellationToken,
     };
 
     use super::MessageHandler;

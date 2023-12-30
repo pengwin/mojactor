@@ -1,4 +1,4 @@
-use virtual_actor::MailboxPreferences;
+use virtual_actor::message::MailboxPreferences;
 
 /// Preferences for the Tokio runtime fro executor
 pub struct TokioRuntimePreferences {

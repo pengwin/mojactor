@@ -1,4 +1,4 @@
-use virtual_actor::{VirtualActor, WeakActorAddr};
+use virtual_actor::{actor::WeakActorAddr, virtual_actor::VirtualActor};
 
 use crate::runtime::{ActorActivator, WeakActorActivator};
 

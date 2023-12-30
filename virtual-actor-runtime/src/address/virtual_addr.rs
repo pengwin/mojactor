@@ -1,4 +1,8 @@
-use virtual_actor::{ActorAddr, Message, MessageEnvelopeFactory, MessageHandler, VirtualActor};
+use virtual_actor::{
+    actor::ActorAddr,
+    message::{Message, MessageEnvelopeFactory, MessageHandler},
+    virtual_actor::VirtualActor,
+};
 
 use crate::runtime::{ActorActivator, ActorSpawnError};
 

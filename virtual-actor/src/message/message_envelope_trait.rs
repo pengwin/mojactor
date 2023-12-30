@@ -1,6 +1,8 @@
 //! Message envelope trait
 
-use crate::{Actor, Message, MessageHandler, Responder};
+use crate::actor::Actor;
+
+use super::{Message, MessageHandler, Responder};
 
 /// Message envelope consumed by Actor
 pub trait MessageEnvelope<A: Actor>: Send + std::fmt::Debug + Sized {}

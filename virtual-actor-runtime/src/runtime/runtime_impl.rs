@@ -1,9 +1,11 @@
 use std::sync::Arc;
 
 use virtual_actor::{
-    Actor, ActorFactory, DefaultLocalActorFactory, DefaultVirtualActorFactory, LocalActor,
-    LocalActorConstructor, LocalActorFactory, VirtualActor, VirtualActorConstructor,
-    VirtualActorFactory,
+    actor::{Actor, ActorFactory},
+    local_actor::{DefaultLocalActorFactory, LocalActor, LocalActorConstructor, LocalActorFactory},
+    virtual_actor::{
+        DefaultVirtualActorFactory, VirtualActor, VirtualActorConstructor, VirtualActorFactory,
+    },
 };
 
 use crate::{

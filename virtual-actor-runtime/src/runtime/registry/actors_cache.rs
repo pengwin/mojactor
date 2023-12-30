@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use dashmap::{mapref::multiple::RefMulti, DashMap};
-use virtual_actor::VirtualActor;
+use virtual_actor::virtual_actor::VirtualActor;
 
 use crate::address::ActorHandle;
 

@@ -1,7 +1,7 @@
 use tokio_util::sync::CancellationToken;
-use virtual_actor::MailboxPreferences;
+use virtual_actor::message::MailboxPreferences;
 
-use super::{super::local_actor::LocalSpawnedActor, SpawnerDispatcher};
+use super::{super::actor::LocalSpawnedActor, SpawnerDispatcher};
 use crate::messaging::Mailbox as BaseMailbox;
 
 /// Mailbox for `LocalSpawner`
@@ -33,9 +33,9 @@ mod tests {
         time::{sleep, Duration},
     };
     use tokio_util::sync::CancellationToken;
-    use virtual_actor::MailboxPreferences;
+    use virtual_actor::message::MailboxPreferences;
 
-    use crate::executor::local_actor::ActorSpawnError;
+    use crate::executor::actor::ActorSpawnError;
 
     #[tokio::test]
     async fn test_mailbox() {

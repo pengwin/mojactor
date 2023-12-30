@@ -1,8 +1,8 @@
 //! Mailbox for actor
 
 use tokio_util::sync::CancellationToken;
-use virtual_actor::Actor;
-use virtual_actor::MailboxPreferences;
+use virtual_actor::actor::Actor;
+use virtual_actor::message::MailboxPreferences;
 
 use crate::messaging::Mailbox as BaseMailbox;
 use crate::messaging::MessageDispatcher;

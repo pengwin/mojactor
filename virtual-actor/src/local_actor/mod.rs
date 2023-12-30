@@ -1,3 +1,5 @@
+//! Module with local actor traits and types
+
 mod default_local_actor_factory;
 mod local_actor_constructor_trait;
 mod local_actor_factory_trait;

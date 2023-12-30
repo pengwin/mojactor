@@ -2,7 +2,8 @@ use std::sync::{Arc, Weak};
 
 use dashmap::DashMap;
 use virtual_actor::{
-    Actor, ActorContext, ActorFactory, ActorName, VirtualActor, VirtualActorFactory,
+    actor::{Actor, ActorContext, ActorFactory, ActorName},
+    virtual_actor::{VirtualActor, VirtualActorFactory},
 };
 
 use crate::{

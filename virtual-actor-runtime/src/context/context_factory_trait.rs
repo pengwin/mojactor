@@ -1,6 +1,6 @@
 //! Context factory trait
 
-use virtual_actor::{Actor, ActorContext};
+use virtual_actor::actor::{Actor, ActorContext};
 
 use crate::address::{ActorHandle, LocalAddr};
 

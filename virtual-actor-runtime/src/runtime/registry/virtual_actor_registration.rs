@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use virtual_actor::{Actor, ActorContext, ActorFactory, VirtualActor, VirtualActorFactory};
+use virtual_actor::{
+    actor::{Actor, ActorContext, ActorFactory},
+    virtual_actor::{VirtualActor, VirtualActorFactory},
+};
 
 use crate::{
     address::ActorHandle, context::ActorContextFactory, executor::LocalExecutorError,

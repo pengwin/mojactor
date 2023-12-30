@@ -1,4 +1,4 @@
-use super::super::local_actor::LocalSpawnedActor;
+use super::super::actor::LocalSpawnedActor;
 use crate::messaging::{MailboxDispatcher, MailboxError};
 
 /// Dispatcher for `LocalSpawner`

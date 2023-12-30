@@ -1,6 +1,7 @@
 use std::future::Future;
 
-use crate::{ActorFactory, LocalActor};
+use super::LocalActor;
+use crate::actor::ActorFactory;
 
 /// Factory trait for local actors
 pub trait LocalActorFactory: ActorFactory

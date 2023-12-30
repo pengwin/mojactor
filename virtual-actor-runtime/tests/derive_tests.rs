@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use serde::Serialize;
-use virtual_actor::ActorAddr;
-use virtual_actor::MessageHandler;
+use virtual_actor::actor::ActorAddr;
+use virtual_actor::message::MessageHandler;
 use virtual_actor_runtime::LocalAddr;
 
 use virtual_actor_runtime::prelude::Actor;
@@ -40,10 +40,8 @@ fn test_derive_virtual_actor_with_messages_name() {
 
 #[test]
 fn test_derive_virtual_actor_name() {
-    assert_eq!(
-        TestActorWithoutMessages::name(),
-        stringify!(TestActorWithoutMessages)
-    );
+    let name = TestActorWithoutMessages::name();
+    assert_eq!(name, stringify!(TestActorWithoutMessages));
 }
 
 #[test]
@@ -55,7 +53,7 @@ fn test_derive_virtual_actor_id() {
 #[derive(Clone)]
 struct TestContext;
 
-impl virtual_actor::ActorContext<TestActorWithContext> for TestContext {
+impl virtual_actor::actor::ActorContext<TestActorWithContext> for TestContext {
     type Addr = LocalAddr<TestActorWithContext>;
 
     fn self_addr(&self) -> &<Self::Addr as ActorAddr<TestActorWithContext>>::WeakRef {
@@ -89,10 +87,8 @@ struct TestActorWithContext {
 
 #[test]
 fn test_derive_virtual_actor_with_context_name() {
-    assert_eq!(
-        TestActorWithContext::name(),
-        stringify!(TestActorWithContext)
-    );
+    let name = TestActorWithContext::name();
+    assert_eq!(name, stringify!(TestActorWithContext));
 }
 
 #[derive(Message, VirtualMessage, Serialize, Deserialize)]

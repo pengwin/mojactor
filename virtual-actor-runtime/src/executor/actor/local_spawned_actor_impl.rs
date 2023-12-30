@@ -10,7 +10,7 @@ use crate::utils::atomic_counter::AtomicCounter;
 use crate::utils::notify_once::NotifyOnce;
 use crate::{address::ActorHandle, address::LocalAddr};
 use futures::FutureExt;
-use virtual_actor::{Actor, ActorContext, ActorFactory};
+use virtual_actor::actor::{Actor, ActorContext, ActorFactory};
 
 use super::{
     error::ActorTaskError, local_spawned_actor_trait::LocalSpawnedActor, mailbox::Mailbox,

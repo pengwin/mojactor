@@ -1,5 +1,6 @@
 use virtual_actor::{
-    Actor, ActorAddr, Message, MessageEnvelopeFactory, MessageHandler, WeakActorAddr,
+    actor::{Actor, ActorAddr, WeakActorAddr},
+    message::{Message, MessageEnvelopeFactory, MessageHandler},
 };
 
 use super::{actor_handle::WeakActorHandle, local_addr::LocalAddrError, ActorHandle};

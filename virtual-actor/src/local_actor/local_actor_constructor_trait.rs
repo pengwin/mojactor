@@ -1,4 +1,4 @@
-use crate::LocalActor;
+use super::LocalActor;
 
 /// Constructor trait for local actors
 pub trait LocalActorConstructor: LocalActor {

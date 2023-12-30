@@ -1,3 +1,5 @@
+//! Module with virtual actor traits and types
+
 mod default_virtual_actor_factory;
 mod virtual_actor_constructor_trait;
 mod virtual_actor_factory_trait;

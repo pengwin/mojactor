@@ -1,4 +1,4 @@
-use crate::VirtualActor;
+use super::VirtualActor;
 
 /// Constructor trait for virtual actors
 pub trait VirtualActorConstructor: VirtualActor {

@@ -1,6 +1,8 @@
 use std::marker::PhantomData;
 
-use crate::{ActorFactory, LocalActorConstructor, LocalActorFactory};
+use crate::actor::ActorFactory;
+
+use super::{LocalActorConstructor, LocalActorFactory};
 
 /// Default local actor factory for Actor which implements `LocalActorConstructor`
 pub struct DefaultLocalActorFactory<A: LocalActorConstructor> {

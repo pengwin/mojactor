@@ -5,9 +5,8 @@
 
 use bench_actor::{AksMessage, BenchActor, DispatchMessage, EchoMessage};
 use criterion::{criterion_group, criterion_main, Criterion};
-use virtual_actor::ActorAddr;
 use virtual_actor_runtime::{
-    prelude::Runtime, ExecutorHandle, ExecutorPreferences, LocalAddr, TokioRuntimePreferences,
+    prelude::{ActorAddr, Runtime}, ExecutorHandle, ExecutorPreferences, LocalAddr, TokioRuntimePreferences,
 };
 
 fn create_runtime() -> Result<tokio::runtime::Runtime, Box<dyn std::error::Error>> {

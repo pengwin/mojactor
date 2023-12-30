@@ -5,7 +5,8 @@ use std::sync::{
 
 use tokio::sync::Mutex;
 use virtual_actor::{
-    Actor, ActorAddr, ActorContext, ActorFactory, VirtualActor, VirtualActorFactory,
+    actor::{Actor, ActorAddr, ActorContext, ActorFactory},
+    virtual_actor::{VirtualActor, VirtualActorFactory},
 };
 
 use crate::{

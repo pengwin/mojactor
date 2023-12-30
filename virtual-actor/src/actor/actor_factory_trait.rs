@@ -1,4 +1,5 @@
-use crate::{Actor, MailboxPreferences};
+use super::Actor;
+use crate::message::MailboxPreferences;
 
 const MAILBOX_PREFERENCES: MailboxPreferences = MailboxPreferences { size: 1024 };
 

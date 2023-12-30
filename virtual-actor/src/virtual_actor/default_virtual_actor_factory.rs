@@ -1,6 +1,8 @@
 use std::marker::PhantomData;
 
-use crate::{ActorFactory, VirtualActorConstructor, VirtualActorFactory};
+use crate::actor::ActorFactory;
+
+use super::{VirtualActorConstructor, VirtualActorFactory};
 
 /// Default virtual actor factory for Actor which implements `VirtualActorConstructor`
 pub struct DefaultVirtualActorFactory<A: VirtualActorConstructor> {

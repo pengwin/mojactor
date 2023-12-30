@@ -1,3 +1,5 @@
+//! Module with message traits and types
+
 mod mailbox_preferences;
 mod message_envelope_trait;
 mod message_handler_trait;

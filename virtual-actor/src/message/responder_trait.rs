@@ -1,6 +1,8 @@
 //! Responder trait for responders actor messages
 
-use crate::{errors::ResponderError, Message, MessageProcessingResult};
+use crate::errors::ResponderError;
+
+use super::{Message, MessageProcessingResult};
 
 /// Responder trait
 ///

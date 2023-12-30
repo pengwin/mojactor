@@ -1,8 +1,9 @@
 //! `ActorAddr` implementation
 
 use virtual_actor::{
-    errors::MessageProcessingError, Actor, ActorAddr, Message, MessageEnvelopeFactory,
-    MessageHandler,
+    actor::{Actor, ActorAddr},
+    errors::MessageProcessingError,
+    message::{Message, MessageEnvelopeFactory, MessageHandler},
 };
 
 use crate::{errors::WaitError, messaging::DispatcherError, GracefulShutdown};

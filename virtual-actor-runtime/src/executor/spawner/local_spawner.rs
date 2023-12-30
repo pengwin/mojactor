@@ -5,7 +5,7 @@ use std::sync::Arc;
 use futures::FutureExt;
 use tokio::sync::Notify;
 use tokio_util::sync::CancellationToken;
-use virtual_actor::MailboxPreferences;
+use virtual_actor::message::MailboxPreferences;
 
 use crate::utils::GracefulShutdownHandle;
 

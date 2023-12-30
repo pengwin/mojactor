@@ -1,8 +1,10 @@
 use std::time::Duration;
 
 use virtual_actor::{
-    utils::CancellationToken, ActorAddr, ActorContext, Message, MessageHandler, VirtualActor,
-    WeakActorAddr,
+    actor::{ActorAddr, ActorContext, WeakActorAddr},
+    message::{Message, MessageHandler},
+    utils::CancellationToken,
+    virtual_actor::VirtualActor,
 };
 
 use crate::{utils::cancellation_token_wrapper::CancellationTokenWrapper, GracefulShutdown};

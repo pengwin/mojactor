@@ -5,7 +5,8 @@ use std::sync::{Arc, OnceLock, Weak};
 use tokio::{select, sync::Notify};
 use tokio_util::sync::CancellationToken;
 use virtual_actor::{
-    Actor, Message, MessageEnvelopeFactory, MessageHandler, MessageProcessingResult,
+    actor::Actor,
+    message::{Message, MessageEnvelopeFactory, MessageHandler, MessageProcessingResult},
 };
 
 use crate::{

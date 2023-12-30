@@ -1,4 +1,7 @@
-use virtual_actor::{MessageEnvelope, MessageEnvelopeFactory, Responder, VirtualActor};
+use virtual_actor::{
+    message::{MessageEnvelope, MessageEnvelopeFactory, Responder},
+    virtual_actor::VirtualActor,
+};
 
 use super::{gc_actors::GarbageCollectActors, HousekeepingActor};
 

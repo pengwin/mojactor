@@ -1,7 +1,7 @@
 use std::future::Future;
 
 use super::VirtualActor;
-use crate::ActorFactory;
+use crate::actor::ActorFactory;
 
 /// Factory trait for virtual actor
 pub trait VirtualActorFactory: ActorFactory

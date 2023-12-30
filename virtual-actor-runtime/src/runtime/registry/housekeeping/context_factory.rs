@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use tokio_util::sync::CancellationToken;
-use virtual_actor::{Actor, VirtualActor};
+use virtual_actor::{actor::Actor, virtual_actor::VirtualActor};
 
 use crate::{
     address::ActorHandle, context::ActorContextFactory,

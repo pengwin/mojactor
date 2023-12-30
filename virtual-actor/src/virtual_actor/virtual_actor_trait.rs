@@ -1,6 +1,6 @@
 //! Virtual actor trait
 
-use crate::{Actor, ActorId};
+use crate::actor::{Actor, ActorId};
 
 /// Virtual Actor trait
 /// Actor instance can be reached by name through network

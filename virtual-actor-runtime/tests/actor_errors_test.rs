@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use virtual_actor::errors::MessageProcessingError;
 use virtual_actor_runtime::{
     errors::{ActorSpawnError, ActorStartError, ActorTaskError, LocalAddrError, VirtualAddrError},
     prelude::*,
@@ -105,7 +106,7 @@ async fn message_panic_test() -> Result<(), Box<dyn std::error::Error>> {
         Ok(()) => panic!("Should not be Ok"),
         Err(err) => match err {
             VirtualAddrError::LocalAddrError(LocalAddrError::MessageProcessingError(
-                errors::MessageProcessingError::Panic(e),
+                MessageProcessingError::Panic(e),
             )) => {
                 assert_eq!(e, id, "Error message should be equal");
             }

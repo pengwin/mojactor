@@ -5,7 +5,7 @@ use tokio::{
     sync::mpsc::{Receiver, Sender},
 };
 use tokio_util::sync::CancellationToken;
-use virtual_actor::MailboxPreferences;
+use virtual_actor::message::MailboxPreferences;
 
 /// Dispatcher for mailbox
 pub type MailboxDispatcher<T> = Sender<T>;
@@ -86,7 +86,7 @@ mod tests {
         time::{sleep, Duration},
     };
     use tokio_util::sync::CancellationToken;
-    use virtual_actor::MailboxPreferences;
+    use virtual_actor::message::MailboxPreferences;
 
     #[tokio::test]
     async fn test_mailbox() {

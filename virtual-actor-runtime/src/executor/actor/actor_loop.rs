@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use std::future::Future;
 
-use virtual_actor::{Actor, ActorContext, ActorFactory};
+use virtual_actor::actor::{Actor, ActorContext, ActorFactory};
 
 use crate::{
     address::ActorHandle, context::ActorContextFactory, utils::notify_once::NotifyOnce, LocalAddr,

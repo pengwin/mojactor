@@ -19,7 +19,7 @@ pub fn render(
                 &mut self,
                 _envelope: Self::MessagesEnvelope,
                 _ctx: &Self::ActorContext,
-            ) -> Result<(), ::virtual_actor_runtime::prelude::errors::ResponderError> {
+            ) -> Result<(), ::virtual_actor_runtime::errors::ResponderError> {
                 Ok(())
             }
         }
@@ -35,7 +35,7 @@ pub fn render(
                 &mut self,
                 envelope: Self::MessagesEnvelope,
                 ctx: &Self::ActorContext,
-            ) -> Result<(), ::virtual_actor_runtime::prelude::errors::ResponderError> {
+            ) -> Result<(), ::virtual_actor_runtime::errors::ResponderError> {
                 match envelope {
                     #(#envelope_handlers),*
                 }

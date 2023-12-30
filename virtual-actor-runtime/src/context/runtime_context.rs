@@ -1,7 +1,8 @@
 //! Runtime context for actor.
 
 use tokio_util::sync::CancellationToken;
-use virtual_actor::{Actor, ActorAddr, ActorContext, VirtualActor};
+use virtual_actor::actor::{Actor, ActorAddr, ActorContext};
+use virtual_actor::virtual_actor::VirtualActor;
 
 use crate::{
     address::{LocalAddr, VirtualAddr},

@@ -4,7 +4,8 @@ use std::sync::Arc;
 
 use tokio::sync::mpsc::error::TrySendError;
 use virtual_actor::{
-    Actor, Message, MessageEnvelopeFactory, MessageHandler, MessageProcessingResult,
+    actor::Actor,
+    message::{Message, MessageEnvelopeFactory, MessageHandler, MessageProcessingResult},
 };
 
 use crate::utils::atomic_counter::AtomicCounter;

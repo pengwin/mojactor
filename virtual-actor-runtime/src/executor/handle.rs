@@ -2,15 +2,16 @@ use std::{sync::Arc, time::Duration};
 
 use tokio_util::sync::CancellationToken;
 use virtual_actor::{
-    Actor, ActorContext, ActorFactory, LocalActor, LocalActorFactory, VirtualActor,
-    VirtualActorFactory,
+    actor::{Actor, ActorContext, ActorFactory},
+    local_actor::{LocalActor, LocalActorFactory},
+    virtual_actor::{VirtualActor, VirtualActorFactory},
 };
 
 use crate::{address::ActorHandle, context::ActorContextFactory, LocalAddr};
 
 use super::{
+    actor::{self, LocalSpawnedActor},
     error::LocalExecutorError,
-    local_actor::{self, LocalSpawnedActor},
     spawner::SpawnerDispatcher,
 };
 
@@ -79,7 +80,7 @@ impl Handle {
         self.spawn_actor(
             actor_factory,
             context_factory,
-            local_actor::create_local_actor,
+            actor::create_local_actor,
             timeout,
         )
         .await
@@ -105,11 +106,7 @@ impl Handle {
         <AF as ActorFactory>::Actor: LocalActor + 'static,
         CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
     {
-        self.spawn_actor_no_wait(
-            actor_factory,
-            context_factory,
-            local_actor::create_local_actor,
-        )
+        self.spawn_actor_no_wait(actor_factory, context_factory, actor::create_local_actor)
     }
 
     /// Spawns virtual local actor on thread without waiting for dispatcher to be set
@@ -134,7 +131,7 @@ impl Handle {
         CF: ActorContextFactory<<AF as ActorFactory>::Actor> + 'static,
     {
         self.spawn_actor_no_wait(actor_factory, context_factory, |af, cf, ct, m_ct| {
-            local_actor::create_virtual_actor(actor_id, af, cf, ct, m_ct)
+            actor::create_virtual_actor(actor_id, af, cf, ct, m_ct)
         })
     }
 

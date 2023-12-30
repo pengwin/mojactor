@@ -1,4 +1,7 @@
-use virtual_actor::{ActorAddr, ActorContext, VirtualActor};
+use virtual_actor::{
+    actor::{ActorAddr, ActorContext},
+    virtual_actor::VirtualActor,
+};
 
 use crate::{
     utils::cancellation_token_wrapper::CancellationTokenWrapper, LocalAddr, WeakLocalAddr,

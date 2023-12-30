@@ -1,7 +1,10 @@
 //! Implements responder based on tokio oneshot channel
 
 use tokio::sync::oneshot::{channel, Receiver, Sender};
-use virtual_actor::{errors::ResponderError, Message, MessageProcessingResult, Responder};
+use virtual_actor::{
+    errors::ResponderError,
+    message::{Message, MessageProcessingResult, Responder},
+};
 
 /// `Responder` based on tokio oneshot channel
 pub struct OneshotResponder<M: Message> {

@@ -2,7 +2,9 @@
 
 use std::future::Future;
 
-use crate::{Actor, Message, MessageEnvelopeFactory, MessageHandler};
+use crate::message::{Message, MessageHandler, MessageEnvelopeFactory};
+
+use super::{Actor, WeakActorAddr};
 
 /// Actor address
 pub trait ActorAddr<A: Actor>: Send + Sync + Sized {
@@ -40,11 +42,4 @@ pub trait ActorAddr<A: Actor>: Send + Sync + Sized {
         A::MessagesEnvelope: MessageEnvelopeFactory<A, M>;
 }
 
-/// Weak actor address
-pub trait WeakActorAddr<A: Actor>: Send + Sync + Clone {
-    /// Upgraded actor address
-    type Upgraded: ActorAddr<A, WeakRef = Self>;
 
-    /// Attempts to upgrade `WeakActorRef` to `ActorAddr`
-    fn upgrade(&self) -> Option<Self::Upgraded>;
-}

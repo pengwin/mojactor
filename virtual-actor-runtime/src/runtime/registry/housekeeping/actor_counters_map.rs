@@ -4,7 +4,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use virtual_actor::VirtualActor;
+use virtual_actor::virtual_actor::VirtualActor;
 
 use crate::address::ActorHandle;
 
