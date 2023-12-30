@@ -1,9 +1,9 @@
 use std::time::Duration;
 
-use virtual_actor::errors::MessageProcessingError;
 use virtual_actor_runtime::{
     errors::{
-        ActorStartError, ActorTaskError, LocalAddrError, RuntimeSpawnError, VirtualAddrError,
+        ActorStartError, ActorTaskError, LocalAddrError, MessageProcessingError, RuntimeSpawnError,
+        VirtualAddrError,
     },
     prelude::*,
     GracefulShutdown, VirtualAddr,

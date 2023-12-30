@@ -1,3 +1,5 @@
+#![allow(clippy::no_effect_underscore_binding)]
+
 use std::thread::ThreadId;
 
 use virtual_actor_runtime::{prelude::*, LocalAddr};

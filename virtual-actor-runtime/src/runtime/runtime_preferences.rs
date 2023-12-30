@@ -1,9 +1,14 @@
 use std::time::Duration;
 
+/// Runtime settings
 pub struct RuntimePreferences {
+    /// Interval for actors garbage collection
     pub garbage_collect_interval: Duration,
+    /// Timeout for actor to be idle before it will be collected
     pub actor_idle_timeout: Duration,
+    /// Timeout for actor to wait for activation before returning an error
     pub actor_activation_timeout: Duration,
+    /// Timeout for actor to wait for shutdown before during graceful shutdown
     pub actor_shutdown_interval: Duration,
 }
 

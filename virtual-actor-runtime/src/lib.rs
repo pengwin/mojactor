@@ -30,6 +30,7 @@ pub mod prelude {
     pub use virtual_actor::virtual_actor::*;
 
     pub use crate::runtime::Runtime;
+    pub use crate::runtime::RuntimePreferences;
 
     // Export derive macros
     pub use virtual_actor_derive::Actor;
