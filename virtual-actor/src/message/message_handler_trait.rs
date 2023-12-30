@@ -3,9 +3,9 @@
 use futures::{FutureExt, TryFutureExt};
 use std::{future::Future, panic::AssertUnwindSafe};
 
-use crate::{utils::unwind_panic, Message, MessageProcessingError, MessageProcessingResult};
-
-use super::actor_trait::Actor;
+use crate::{
+    errors::MessageProcessingError, utils::unwind_panic, Actor, Message, MessageProcessingResult,
+};
 
 /// Message Handler trait
 /// Responsible for handling specific message type
@@ -32,12 +32,14 @@ pub trait MessageHandler<M: Message>: Actor {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::no_effect_underscore_binding)]
+
     use std::{cell::RefCell, rc::Rc};
 
     use crate::{
-        actor_addr::ActorAddr, responder_trait::ResponderError, Actor, ActorContext,
-        CancellationToken, Message, MessageEnvelope, MessageEnvelopeFactory,
-        MessageProcessingResult, Responder, WeakActorAddr,
+        errors::ResponderError, utils::CancellationToken, Actor, ActorAddr, ActorContext,
+        ActorName, Message, MessageEnvelope, MessageEnvelopeFactory, MessageProcessingResult,
+        Responder, WeakActorAddr,
     };
 
     use super::MessageHandler;
@@ -104,7 +106,7 @@ mod tests {
             Ok(())
         }
 
-        fn name() -> crate::names::ActorName {
+        fn name() -> ActorName {
             stringify!(TestActor)
         }
     }

@@ -24,7 +24,7 @@ impl<A: VirtualActor> Actor for HousekeepingActor<A> {
 
     type MessagesEnvelope = InnerMessageEnvelope;
 
-    fn name() -> virtual_actor::names::ActorName {
+    fn name() -> virtual_actor::ActorName {
         stringify!(HousekeepingActor)
     }
 
@@ -32,7 +32,7 @@ impl<A: VirtualActor> Actor for HousekeepingActor<A> {
         &mut self,
         envelope: Self::MessagesEnvelope,
         ctx: &Self::ActorContext,
-    ) -> Result<(), virtual_actor::ResponderError> {
+    ) -> Result<(), virtual_actor::errors::ResponderError> {
         match envelope {
             InnerMessageEnvelope::GarbageCollectActors(msg) => {
                 self.handle(msg, ctx).await;

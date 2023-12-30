@@ -75,7 +75,7 @@ impl virtual_actor::ActorContext<TestActorWithContext> for TestContext {
 
 struct TestCancellationToken;
 
-impl virtual_actor::CancellationToken for TestCancellationToken {
+impl virtual_actor::utils::CancellationToken for TestCancellationToken {
     async fn cancelled(&self) {
         todo!()
     }

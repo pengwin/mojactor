@@ -1,17 +1,6 @@
 //! Responder trait for responders actor messages
 
-use crate::{Message, MessageProcessingResult};
-
-/// Responder error
-#[derive(thiserror::Error, Debug)]
-pub enum ResponderError {
-    /// Communication channel error
-    #[error("ResponderChannelError {0:?}")]
-    ChannelError(&'static str),
-    /// Response was already used
-    #[error("AlreadyRespond {0}")]
-    AlreadyRespond(&'static str),
-}
+use crate::{errors::ResponderError, Message, MessageProcessingResult};
 
 /// Responder trait
 ///

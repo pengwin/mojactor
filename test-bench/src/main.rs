@@ -1,5 +1,6 @@
 //! Test bench to run simple actors
 #![allow(clippy::missing_docs_in_private_items)]
+#![allow(clippy::no_effect_underscore_binding)]
 
 mod hello_actor;
 mod hello_virtual_actor;
@@ -27,14 +28,36 @@ const SHUTDOWN_TIMEOUT: Duration = Duration::from_millis(10000);
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    test_qwe().await?;
-    /*bench_send_wait().await?;
+    let args: Vec<String> = std::env::args().collect();
+    let bench_names = args[1..].to_vec();
+    if bench_names.is_empty() {
+        run_all_benches().await?;
+    } else {
+        for bench_name in bench_names {
+            match bench_name.as_str() {
+                "test_qwe" => test_qwe().await?,
+                "spawn_wait_shutdown" => bench_spawn_wait_shutdown().await?,
+                "send_wait" => bench_send_wait().await?,
+                "same_thread_ping_pong" => bench_same_thread_ping_pong().await?,
+                "2_executors_ping_pong" => bench_2_executors_ping_pong().await?,
+                "infinite_loop_pending" => bench_infinite_loop_pending().await?,
+                "virtual_actor_spawn_send_wait" => bench_virtual_actor_spawn_send_wait().await?,
+                "virtual_ping_pong" => bench_virtual_ping_pong().await?,
+                _ => println!("Unknown bench name: {bench_name}"),
+            }
+        }
+    }
+
+    Ok(())
+}
+
+async fn run_all_benches() -> Result<(), Box<dyn std::error::Error>> {
     bench_spawn_wait_shutdown().await?;
+    bench_send_wait().await?;
     bench_same_thread_ping_pong().await?;
     bench_2_executors_ping_pong().await?;
-    bench_infinite_loop_pending().await?;
     bench_virtual_actor_spawn_send_wait().await?;
-    bench_virtual_ping_pong().await?;*/
+    bench_virtual_ping_pong().await?;
 
     Ok(())
 }

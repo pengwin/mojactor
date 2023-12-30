@@ -2,7 +2,8 @@
 
 use std::future::Future;
 
-use crate::{names::ActorName, ActorContext, MessageEnvelope, ResponderError};
+use super::ActorName;
+use crate::{errors::ResponderError, ActorContext, MessageEnvelope};
 
 /// Marker trait for actors
 pub trait Actor: Sized {

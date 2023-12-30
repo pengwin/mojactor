@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use virtual_actor::{
-    ActorAddr, ActorContext, CancellationToken, Message, MessageHandler, VirtualActor,
+    utils::CancellationToken, ActorAddr, ActorContext, Message, MessageHandler, VirtualActor,
     WeakActorAddr,
 };
 
@@ -16,6 +16,7 @@ impl Message for GarbageCollectActors {
     type Result = ();
 }
 
+#[allow(clippy::no_effect_underscore_binding)]
 impl<A: VirtualActor> MessageHandler<GarbageCollectActors> for HousekeepingActor<A> {
     async fn handle(
         &mut self,
@@ -23,6 +24,8 @@ impl<A: VirtualActor> MessageHandler<GarbageCollectActors> for HousekeepingActor
         ctx: &Self::ActorContext,
     ) -> <GarbageCollectActors as Message>::Result {
         let mut idle_actors = Vec::new();
+        let mut finished_actors = Vec::new();
+
         // find all finished or idle actors
         for e in self.cache.iter() {
             let (actor_id, handle) = e.pair();
@@ -31,8 +34,7 @@ impl<A: VirtualActor> MessageHandler<GarbageCollectActors> for HousekeepingActor
                 .actor_counters
                 .is_idle(actor_id, self.preferences.actor_idle_timeout);
             if handle.is_finished() {
-                println!("Actor {actor_id} is finished");
-                self.cache.remove(actor_id);
+                finished_actors.push(actor_id.clone());
                 continue;
             }
             if is_idle {
@@ -41,6 +43,13 @@ impl<A: VirtualActor> MessageHandler<GarbageCollectActors> for HousekeepingActor
         }
 
         let actor_name = A::name();
+
+        // remove finished actors
+        for actor_id in finished_actors {
+            println!("Actor {actor_name}::{actor_id} is finished");
+            self.cache.remove(&actor_id);
+            self.actor_counters.remove(&actor_id);
+        }
 
         // remove idle actors
         for actor_id in idle_actors {

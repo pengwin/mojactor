@@ -1,11 +1,14 @@
 //! Trait for message processing context
 
-use crate::{actor_addr::ActorAddr, Actor, CancellationToken};
+use crate::utils::CancellationToken;
+
+use super::{actor_addr::ActorAddr, Actor};
 
 /// Context for message processing
 pub trait ActorContext<A: Actor>: Clone {
     /// Actor address type
     type Addr: ActorAddr<A>;
+
     /// Cancellation token
     type CancellationToken: CancellationToken;
 

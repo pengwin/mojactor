@@ -1,6 +1,6 @@
 use tokio_util::sync::CancellationToken;
 
-use virtual_actor::CancellationToken as CancellationTokenTrait;
+use virtual_actor::utils::CancellationToken as CancellationTokenTrait;
 
 /// Cancellation token wrapper around `tokio_util::sync::CancellationToken`
 #[derive(Clone)]

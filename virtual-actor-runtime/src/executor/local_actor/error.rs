@@ -1,7 +1,7 @@
 //! Error produced by actor task
 
 use tokio::task::JoinError;
-use virtual_actor::ResponderError;
+use virtual_actor::errors::ResponderError;
 
 use crate::address::ActorTaskContainerError;
 

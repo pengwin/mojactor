@@ -27,7 +27,7 @@ pub fn virtual_message_derive(input: TokenStream) -> TokenStream {
         // The generated impl.
 
         impl ::virtual_actor_runtime::prelude::VirtualMessage for #name {
-            fn name() -> ::virtual_actor_runtime::prelude::names::MessageName {
+            fn name() -> ::virtual_actor_runtime::prelude::MessageName {
                 stringify!(#name)
             }
         }
