@@ -2,7 +2,8 @@ use std::sync::{Arc, OnceLock};
 
 use tokio_util::sync::CancellationToken;
 use virtual_actor::{
-    actor::{Actor, ActorContext, ActorFactory}, local_actor::{LocalActor, LocalActorFactory},
+    actor::{Actor, ActorContext, ActorFactory},
+    local_actor::{LocalActor, LocalActorFactory},
 };
 
 use crate::{
@@ -10,10 +11,13 @@ use crate::{
     LocalAddr,
 };
 
-use super::{super::{
-    local_spawned_actor_impl::LocalSpawnedActorImpl,
-    local_spawned_actor_trait::LocalSpawnedActor, 
-}, actor_loop::LocalActorLoop};
+use super::{
+    super::{
+        local_spawned_actor_impl::LocalSpawnedActorImpl,
+        local_spawned_actor_trait::LocalSpawnedActor,
+    },
+    actor_loop::LocalActorLoop,
+};
 
 /// Creates new local actor
 pub fn create_local_actor<AF, CF>(

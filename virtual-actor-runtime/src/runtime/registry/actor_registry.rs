@@ -7,23 +7,11 @@ use virtual_actor::{
 };
 
 use crate::{
-    address::VirtualAddr, context::ActorContextFactory, executor::LocalExecutorError,
+    address::VirtualAddr, context::ActorContextFactory, executor::errors::LocalExecutorError,
     runtime::runtime_preferences::RuntimePreferences, ExecutorHandle, LocalAddr,
 };
 
-use super::actor_activator::{ActorActivator, ActorSpawnError};
-
-#[derive(Debug, thiserror::Error)]
-pub enum ActivateActorError {
-    #[error("Actor {0:?} not found")]
-    ActorNotFound(ActorName),
-    #[error("Actor registry dropped")]
-    ActorRegistryDropped,
-    #[error("Unexpected activator registered for actor {0:?}")]
-    UnexpectedActivator(ActorName),
-    #[error("ActorSpawnError: {0:?}")]
-    SpawnError(#[from] ActorSpawnError),
-}
+use super::{actor_activator::ActorActivator, errors::ActivateActorError};
 
 pub struct ActorRegistry {
     inner: Arc<Inner>,

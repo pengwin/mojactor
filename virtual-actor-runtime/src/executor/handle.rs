@@ -11,7 +11,7 @@ use crate::{address::ActorHandle, context::ActorContextFactory, LocalAddr};
 
 use super::{
     actor::{self, LocalSpawnedActor},
-    error::LocalExecutorError,
+    errors::LocalExecutorError,
     spawner::SpawnerDispatcher,
 };
 

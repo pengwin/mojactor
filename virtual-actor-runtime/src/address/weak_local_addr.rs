@@ -3,7 +3,7 @@ use virtual_actor::{
     message::{Message, MessageEnvelopeFactory, MessageHandler},
 };
 
-use super::{actor_handle::WeakActorHandle, local_addr::LocalAddrError, ActorHandle};
+use super::{actor_handle::WeakActorHandle, ActorHandle};
 
 /// Weak actor address
 pub struct WeakLocalAddr<A: Actor> {
@@ -60,10 +60,10 @@ impl<A: Actor> UpgradedWeakLocalAddr<A> {
 }
 
 impl<A: Actor> ActorAddr<A> for UpgradedWeakLocalAddr<A> {
-    type Error = LocalAddrError;
+    type Error = super::errors::LocalAddrError;
     type WeakRef = WeakLocalAddr<A>;
 
-    async fn send<M>(&self, msg: M) -> Result<M::Result, LocalAddrError>
+    async fn send<M>(&self, msg: M) -> Result<M::Result, super::errors::LocalAddrError>
     where
         M: Message,
         A: MessageHandler<M>,
@@ -72,7 +72,7 @@ impl<A: Actor> ActorAddr<A> for UpgradedWeakLocalAddr<A> {
         self.handle.send(msg).await
     }
 
-    async fn dispatch<M>(&self, msg: M) -> Result<(), LocalAddrError>
+    async fn dispatch<M>(&self, msg: M) -> Result<(), super::errors::LocalAddrError>
     where
         M: Message,
         A: MessageHandler<M>,

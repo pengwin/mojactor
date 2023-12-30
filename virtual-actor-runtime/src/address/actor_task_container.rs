@@ -1,12 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use super::ActorTask;
-
-#[derive(thiserror::Error, Debug)]
-#[error("Actor task container error: {message}")]
-pub struct ActorTaskContainerError {
-    pub message: String,
-}
+use super::{errors::ActorTaskContainerError, ActorTask};
 
 pub struct ActorTaskContainer {
     inner: Arc<Mutex<Option<ActorTask>>>,

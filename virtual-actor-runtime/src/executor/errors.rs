@@ -1,6 +1,8 @@
 //! Error for `LocalExecutor`
 
-use crate::address::ActorStartError;
+use crate::address::errors::ActorStartError;
+
+pub use super::actor::errors::{ActorSpawnError, ActorTaskError};
 
 /// `LocalExecutor` errors
 #[derive(thiserror::Error, Debug)]

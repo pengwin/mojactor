@@ -6,7 +6,7 @@ use virtual_actor::{
 };
 
 use crate::{
-    address::ActorHandle, context::ActorContextFactory, executor::LocalExecutorError,
+    address::ActorHandle, context::ActorContextFactory, executor::errors::LocalExecutorError,
     ExecutorHandle, LocalAddr,
 };
 

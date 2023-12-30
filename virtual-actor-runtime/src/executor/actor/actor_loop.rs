@@ -8,7 +8,7 @@ use crate::{
     address::ActorHandle, context::ActorContextFactory, utils::notify_once::NotifyOnce, LocalAddr,
 };
 
-use super::{error::ActorTaskError, mailbox::Mailbox};
+use super::{errors::ActorTaskError, mailbox::Mailbox};
 
 /// Actor loop trait
 pub trait ActorLoop<AF, CF>: Send + Sync + Clone + 'static

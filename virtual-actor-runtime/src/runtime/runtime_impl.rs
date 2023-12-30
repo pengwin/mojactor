@@ -10,16 +10,13 @@ use virtual_actor::{
 
 use crate::{
     address::VirtualAddr,
-    errors::WaitError,
-    executor::{LocalExecutor, LocalExecutorError},
+    errors::{ActivateActorError, WaitError},
+    executor::{errors::LocalExecutorError, LocalExecutor},
     ExecutorHandle, ExecutorPreferences, GracefulShutdown, LocalAddr, RuntimeContext,
     RuntimeContextFactory, TokioRuntimePreferences,
 };
 
-use super::{
-    registry::{ActivateActorError, ActorRegistry},
-    runtime_preferences::RuntimePreferences,
-};
+use super::{registry::ActorRegistry, runtime_preferences::RuntimePreferences};
 
 /// Virtual actor runtime
 pub struct Runtime {

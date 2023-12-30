@@ -1,5 +1,5 @@
 use super::super::actor::LocalSpawnedActor;
-use crate::messaging::{MailboxDispatcher, MailboxError};
+use crate::messaging::{errors::MailboxError, MailboxDispatcher};
 
 /// Dispatcher for `LocalSpawner`
 #[derive(Clone)]

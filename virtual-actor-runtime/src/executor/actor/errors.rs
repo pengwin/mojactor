@@ -3,7 +3,7 @@
 use tokio::task::JoinError;
 use virtual_actor::errors::ResponderError;
 
-use crate::address::ActorTaskContainerError;
+use crate::address::errors::ActorTaskContainerError;
 
 /// Error produced by actor task
 #[derive(Debug, thiserror::Error)]
@@ -33,6 +33,7 @@ impl ActorTaskError {
     }
 }
 
+/// Error occurred during actor spawn
 #[derive(Debug, thiserror::Error)]
 pub enum ActorSpawnError {
     /// Dispatcher already set

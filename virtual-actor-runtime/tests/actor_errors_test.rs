@@ -2,7 +2,9 @@ use std::time::Duration;
 
 use virtual_actor::errors::MessageProcessingError;
 use virtual_actor_runtime::{
-    errors::{ActorSpawnError, ActorStartError, ActorTaskError, LocalAddrError, VirtualAddrError},
+    errors::{
+        ActorStartError, ActorTaskError, LocalAddrError, RuntimeSpawnError, VirtualAddrError,
+    },
     prelude::*,
     GracefulShutdown, VirtualAddr,
 };
@@ -29,7 +31,7 @@ async fn factory_error_test() -> Result<(), Box<dyn std::error::Error>> {
     match send_res {
         Ok(()) => panic!("Should not be Ok"),
         Err(e) => match e {
-            VirtualAddrError::SpawnError(ActorSpawnError::ActorStartError(
+            VirtualAddrError::SpawnError(RuntimeSpawnError::ActorStartError(
                 ActorStartError::ActorTaskError(ActorTaskError::ActorFactoryError(e)),
             )) => {
                 if let Ok(e) = e.downcast::<FactoryError>() {
@@ -67,7 +69,7 @@ async fn factory_panic_test() -> Result<(), Box<dyn std::error::Error>> {
     match send_res {
         Ok(()) => panic!("Should not be Ok"),
         Err(e) => match e {
-            VirtualAddrError::SpawnError(ActorSpawnError::ActorStartError(
+            VirtualAddrError::SpawnError(RuntimeSpawnError::ActorStartError(
                 ActorStartError::ActorTaskError(ActorTaskError::ActorPanic(e)),
             )) => {
                 assert_eq!(e, id, "Error message should be equal");

@@ -10,8 +10,8 @@ use virtual_actor::{
 };
 
 use crate::{
-    executor::ActorTaskError,
-    messaging::{DispatcherError, MessageDispatcher},
+    executor::errors::ActorTaskError,
+    messaging::{errors::DispatcherError, MessageDispatcher},
     utils::{atomic_counter::AtomicCounter, GracefulShutdown},
     utils::{
         notify_once::NotifyOnce,
@@ -20,25 +20,11 @@ use crate::{
     LocalAddr,
 };
 
+use super::errors::ActorTaskContainerError;
 use super::{
-    actor_task_container::{ActorTaskContainer, ActorTaskContainerError},
-    local_addr::LocalAddrError,
+    actor_task_container::ActorTaskContainer, errors::ActorStartError, errors::LocalAddrError,
     ActorTask,
 };
-
-/// Actor start error
-#[derive(thiserror::Error, Debug)]
-pub enum ActorStartError {
-    /// Start wait error
-    #[error("Start wait error: {0:?}")]
-    WaitError(#[from] WaitError),
-    /// Actor task error
-    #[error("ActorTaskError: {0:?}")]
-    ActorTaskError(#[from] ActorTaskError),
-    /// Unexpected state
-    #[error("Unexpected state {0}")]
-    UnexpectedState(String),
-}
 
 pub struct WeakActorHandle<A: Actor> {
     inner: Weak<ActorInner<A>>,

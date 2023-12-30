@@ -4,9 +4,10 @@ use tokio_util::sync::CancellationToken;
 use virtual_actor::actor::{Actor, ActorAddr, ActorContext};
 use virtual_actor::virtual_actor::VirtualActor;
 
+use crate::runtime::errors::ActivateActorError;
 use crate::{
     address::{LocalAddr, VirtualAddr},
-    runtime::{ActivateActorError, WeakActorRegistry},
+    runtime::WeakActorRegistry,
     utils::cancellation_token_wrapper::CancellationTokenWrapper,
     WeakLocalAddr,
 };

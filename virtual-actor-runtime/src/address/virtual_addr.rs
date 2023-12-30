@@ -4,26 +4,9 @@ use virtual_actor::{
     virtual_actor::VirtualActor,
 };
 
-use crate::runtime::{ActorActivator, ActorSpawnError};
+use crate::runtime::ActorActivator;
 
-use super::{
-    actor_task_container::ActorTaskContainerError, weak_virtual_addr::WeakVirtualAddr, ActorHandle,
-    LocalAddrError,
-};
-
-/// Actor handler error
-#[derive(thiserror::Error, Debug)]
-pub enum VirtualAddrError {
-    /// Actor spawn error
-    #[error("ActorSpawnError {0:?}")]
-    SpawnError(#[from] ActorSpawnError),
-    /// Dispatcher error
-    #[error("LocalAddrError {0:?}")]
-    LocalAddrError(#[from] LocalAddrError),
-    /// Actor task error
-    #[error("ActorTaskContainerError {0:?}")]
-    ActorTaskContainerError(#[from] ActorTaskContainerError),
-}
+use super::{weak_virtual_addr::WeakVirtualAddr, ActorHandle};
 
 /// Virtual actor address
 pub struct VirtualAddr<A: VirtualActor> {
@@ -39,7 +22,7 @@ impl<A: VirtualActor> VirtualAddr<A> {
         }
     }
 
-    async fn get_addr(&self) -> Result<ActorHandle<A>, VirtualAddrError> {
+    async fn get_addr(&self) -> Result<ActorHandle<A>, super::errors::VirtualAddrError> {
         let handle = self.activator.get_or_spawn(&self.id).await?;
 
         Ok(handle)
@@ -47,7 +30,7 @@ impl<A: VirtualActor> VirtualAddr<A> {
 }
 
 impl<A: VirtualActor> ActorAddr<A> for VirtualAddr<A> {
-    type Error = VirtualAddrError;
+    type Error = super::errors::VirtualAddrError;
 
     type WeakRef = WeakVirtualAddr<A>;
 
@@ -60,7 +43,7 @@ impl<A: VirtualActor> ActorAddr<A> for VirtualAddr<A> {
         let addr = self.get_addr().await?;
         addr.send(msg)
             .await
-            .map_err(VirtualAddrError::LocalAddrError)
+            .map_err(super::errors::VirtualAddrError::LocalAddrError)
     }
 
     async fn dispatch<M>(&self, msg: M) -> Result<(), Self::Error>

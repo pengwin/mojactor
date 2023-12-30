@@ -1,14 +1,17 @@
 use std::{marker::PhantomData, sync::Arc};
 
 use tokio::select;
-use virtual_actor::{actor::{Actor, ActorContext, ActorFactory}, virtual_actor::{VirtualActor, VirtualActorFactory}};
+use virtual_actor::{
+    actor::{Actor, ActorContext, ActorFactory},
+    virtual_actor::{VirtualActor, VirtualActorFactory},
+};
 
 use crate::utils::atomic_counter::AtomicCounter;
 use crate::utils::notify_once::NotifyOnce;
 use crate::{address::ActorHandle, context::ActorContextFactory, LocalAddr};
 
 use super::super::mailbox::Mailbox;
-use super::{super::actor_loop::ActorLoop, super::error::ActorTaskError};
+use super::{super::actor_loop::ActorLoop, super::errors::ActorTaskError};
 
 pub struct VirtualActorLoop<AF, CF>
 where

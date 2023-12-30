@@ -10,51 +10,22 @@ use virtual_actor::{
 };
 
 use crate::{
-    address::{ActorHandle, ActorStartError, LocalAddrError},
+    address::ActorHandle,
     context::ActorContextFactory,
-    errors::WaitError,
-    executor::{Handle, LocalExecutorError},
+    executor::{errors::LocalExecutorError, Handle},
     runtime::runtime_preferences::RuntimePreferences,
     ExecutorHandle, LocalAddr,
 };
 
 use super::{
     actors_cache::ActorsCache,
+    errors::{RuntimeSpawnError, StartHousekeepingError},
     housekeeping::{
         GarbageCollectActors, HousekeepingActor, HousekeepingActorFactory,
         HousekeepingContextFactory,
     },
     virtual_actor_registration::{VirtualActorRegistration, VirtualActorSpawner},
 };
-
-#[derive(Debug, thiserror::Error)]
-#[allow(clippy::enum_variant_names)]
-pub enum StartHousekeepingError {
-    #[error("WaitDispatcherError {0:?}")]
-    WaitDispatcherError(#[from] WaitError),
-    #[error("StartGarbageCollectError {0:?}")]
-    StartGarbageCollectError(#[from] LocalAddrError),
-    /// Actor start error
-    #[error("Actor start error {0:?}")]
-    ActorStartError(#[from] ActorStartError),
-}
-
-/// Actor spawn error
-#[derive(Debug, thiserror::Error)]
-pub enum ActorSpawnError {
-    /// Start housekeeping error
-    #[error("StartHousekeepingError {0:?}")]
-    StartHousekeeping(#[from] StartHousekeepingError),
-    /// Wait dispatcher error
-    #[error("WaitDispatcherError {0:?}")]
-    WaitDispatcher(#[from] WaitError),
-    /// Executor error
-    #[error("ExecutorError {0:?}")]
-    ExecutorError(#[from] LocalExecutorError),
-    /// Actor start error
-    #[error("Actor start error {0:?}")]
-    ActorStartError(#[from] ActorStartError),
-}
 
 pub struct ActorActivator<A: VirtualActor> {
     inner: Arc<Inner<A>>,
@@ -134,7 +105,7 @@ impl<A: VirtualActor> ActorActivator<A> {
         }
     }
 
-    pub async fn get_or_spawn(&self, id: &A::ActorId) -> Result<ActorHandle<A>, ActorSpawnError> {
+    pub async fn get_or_spawn(&self, id: &A::ActorId) -> Result<ActorHandle<A>, RuntimeSpawnError> {
         if let Some(handle) = self.inner.cache.get(id) {
             return Ok(handle);
         }

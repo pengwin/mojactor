@@ -2,7 +2,7 @@
 
 use std::future::Future;
 
-use super::{ActorName, ActorContext};
+use super::{ActorContext, ActorName};
 use crate::{errors::ResponderError, message::MessageEnvelope};
 
 /// Marker trait for actors

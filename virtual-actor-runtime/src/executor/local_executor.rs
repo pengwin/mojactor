@@ -13,7 +13,7 @@ use crate::utils::GracefulShutdown;
 use crate::utils::GracefulShutdownHandle;
 use tokio_util::sync::CancellationToken;
 
-use super::error::LocalExecutorError;
+use super::errors::LocalExecutorError;
 use super::executor_preferences::TokioRuntimePreferences;
 use super::handle::Handle;
 use super::local_set_wrapper::LocalSetWrapper;

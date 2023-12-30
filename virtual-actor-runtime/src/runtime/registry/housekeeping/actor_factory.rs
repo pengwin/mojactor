@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use tokio_util::sync::CancellationToken;
-use virtual_actor::{actor::ActorFactory, local_actor::LocalActorFactory, virtual_actor::VirtualActor};
+use virtual_actor::{
+    actor::ActorFactory, local_actor::LocalActorFactory, virtual_actor::VirtualActor,
+};
 
 use crate::runtime::{
     registry::actors_cache::ActorsCache, runtime_preferences::RuntimePreferences,

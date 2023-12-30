@@ -3,7 +3,7 @@
 use std::{any::Any, panic::AssertUnwindSafe, sync::Arc};
 
 use super::actor_loop::ActorLoop;
-use super::ActorSpawnError;
+use super::errors::ActorSpawnError;
 use crate::address::ActorTask;
 use crate::context::ActorContextFactory;
 use crate::utils::atomic_counter::AtomicCounter;
@@ -13,7 +13,7 @@ use futures::FutureExt;
 use virtual_actor::actor::{Actor, ActorContext, ActorFactory};
 
 use super::{
-    error::ActorTaskError, local_spawned_actor_trait::LocalSpawnedActor, mailbox::Mailbox,
+    errors::ActorTaskError, local_spawned_actor_trait::LocalSpawnedActor, mailbox::Mailbox,
 };
 
 /// Local actor implementation

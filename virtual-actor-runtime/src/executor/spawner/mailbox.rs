@@ -35,7 +35,7 @@ mod tests {
     use tokio_util::sync::CancellationToken;
     use virtual_actor::message::MailboxPreferences;
 
-    use crate::executor::actor::ActorSpawnError;
+    use crate::executor::actor::errors::ActorSpawnError;
 
     #[tokio::test]
     async fn test_mailbox() {

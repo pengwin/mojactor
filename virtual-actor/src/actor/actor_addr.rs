@@ -2,7 +2,7 @@
 
 use std::future::Future;
 
-use crate::message::{Message, MessageHandler, MessageEnvelopeFactory};
+use crate::message::{Message, MessageEnvelopeFactory, MessageHandler};
 
 use super::{Actor, WeakActorAddr};
 
@@ -41,5 +41,3 @@ pub trait ActorAddr<A: Actor>: Send + Sync + Sized {
         A: MessageHandler<M>,
         A::MessagesEnvelope: MessageEnvelopeFactory<A, M>;
 }
-
-

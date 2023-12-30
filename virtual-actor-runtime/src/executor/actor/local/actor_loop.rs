@@ -10,7 +10,7 @@ use crate::{
     address::ActorHandle, context::ActorContextFactory, utils::notify_once::NotifyOnce, LocalAddr,
 };
 
-use super::{super::actor_loop::ActorLoop, super::error::ActorTaskError, super::mailbox::Mailbox};
+use super::{super::actor_loop::ActorLoop, super::errors::ActorTaskError, super::mailbox::Mailbox};
 
 pub struct LocalActorLoop<AF, CF>
 where

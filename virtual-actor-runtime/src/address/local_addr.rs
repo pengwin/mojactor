@@ -2,33 +2,12 @@
 
 use virtual_actor::{
     actor::{Actor, ActorAddr},
-    errors::MessageProcessingError,
     message::{Message, MessageEnvelopeFactory, MessageHandler},
 };
 
-use crate::{errors::WaitError, messaging::DispatcherError, GracefulShutdown};
+use crate::{errors::WaitError, GracefulShutdown};
 
-use super::{
-    actor_handle::{ActorHandle, ActorStartError},
-    weak_local_addr::WeakLocalAddr,
-};
-
-/// Actor handler error
-#[derive(thiserror::Error, Debug)]
-pub enum LocalAddrError {
-    /// Dispatcher not set
-    #[error("Actor not ready to receive messages")]
-    ActorNotReady,
-    /// Dispatcher not set
-    #[error("Actor stopped")]
-    Stopped,
-    /// Dispatcher error
-    #[error("Dispatch error {0:?}")]
-    DispatcherError(#[from] DispatcherError),
-    /// Message processing error
-    #[error("Message processing error {0:?}")]
-    MessageProcessingError(#[from] MessageProcessingError),
-}
+use super::{actor_handle::ActorHandle, weak_local_addr::WeakLocalAddr};
 
 /// Actor address
 ///
@@ -56,7 +35,7 @@ impl<A: Actor> LocalAddr<A> {
     pub async fn wait_for_ready(
         &self,
         timeout: std::time::Duration,
-    ) -> Result<(), ActorStartError> {
+    ) -> Result<(), super::errors::ActorStartError> {
         self.handle.wait_for_ready(timeout).await
     }
 }
@@ -69,7 +48,7 @@ impl<A: Actor> Drop for LocalAddr<A> {
 }
 
 impl<A: Actor> ActorAddr<A> for LocalAddr<A> {
-    type Error = LocalAddrError;
+    type Error = super::errors::LocalAddrError;
 
     type WeakRef = WeakLocalAddr<A>;
 
