@@ -16,6 +16,7 @@ struct TestActorWithMessages {
 }
 
 impl MessageHandler<TestMessage> for TestActorWithMessages {
+    #[allow(clippy::no_effect_underscore_binding)]
     async fn handle(
         &mut self,
         _msg: TestMessage,
@@ -26,8 +27,9 @@ impl MessageHandler<TestMessage> for TestActorWithMessages {
 }
 
 #[derive(Actor, VirtualActor)]
+#[id_field(_id)]
 struct TestActorWithoutMessages {
-    id: u32,
+    _id: u32,
 }
 
 #[test]
@@ -81,8 +83,9 @@ impl virtual_actor::utils::CancellationToken for TestCancellationToken {
 
 #[derive(Actor, VirtualActor)]
 #[context(TestContext)]
+#[id_field(_id)]
 struct TestActorWithContext {
-    id: u32,
+    _id: u32,
 }
 
 #[test]

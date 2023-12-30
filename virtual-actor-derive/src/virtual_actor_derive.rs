@@ -2,7 +2,7 @@
 
 use proc_macro::TokenStream;
 use quote::{quote, quote_spanned};
-use syn::{parse_macro_input, DeriveInput, Fields};
+use syn::{parse_macro_input, Attribute, DeriveInput, Fields};
 
 /// Implementation of derive macro for [`VirtualActor`]
 pub fn virtual_actor_derive(input: TokenStream) -> TokenStream {
@@ -20,18 +20,22 @@ pub fn virtual_actor_derive(input: TokenStream) -> TokenStream {
         }
     };
 
-    let id_field_type = match get_id_field(&actor_struct.fields) {
+    let id_field = pase_attributes(&ast.attrs).unwrap_or_else(|| "id".to_owned());
+
+    let id_field_type = match get_id_field(&actor_struct.fields, &id_field) {
         Some(field) => &field.ty,
         None => {
-            return quote_spanned! {
-                ast.ident.span() =>
-                compile_error!("Struct must have `id` field");
-            }
+            return syn::Error::new(
+                ast.ident.span(),
+                format!("Struct must have `{id_field}` field"),
+            )
+            .to_compile_error()
             .into();
         }
     };
 
     let name = &ast.ident;
+    let id_field = syn::Ident::new(&id_field, name.span());
 
     // Build the output, possibly using quasi-quotation
     let expanded = quote! {
@@ -41,7 +45,7 @@ pub fn virtual_actor_derive(input: TokenStream) -> TokenStream {
             type ActorId = #id_field_type;
 
             fn id(&self) -> &Self::ActorId {
-                &self.id
+                &self.#id_field
             }
         }
     };
@@ -51,12 +55,33 @@ pub fn virtual_actor_derive(input: TokenStream) -> TokenStream {
 }
 
 /// Finds `id` field required for [`VirtualActor`]
-fn get_id_field(fields: &Fields) -> Option<&syn::Field> {
+fn get_id_field<'a>(fields: &'a Fields, id_field: &'a str) -> Option<&'a syn::Field> where {
     match fields {
         Fields::Named(fields) => fields.named.iter().find(|f| match &f.ident {
-            Some(name) => name == "id",
+            Some(name) => name == id_field,
             None => false,
         }),
         _ => None,
     }
+}
+
+fn pase_attributes(attrs: &[Attribute]) -> Option<String> {
+    attrs.iter().find_map(|attr| match &attr.meta {
+        syn::Meta::List(meta) => {
+            if meta.path.is_ident("id_field") {
+                parse_id_field_attr(meta)
+            } else {
+                None
+            }
+        }
+        _ => None,
+    })
+}
+
+fn parse_id_field_attr(attr: &syn::MetaList) -> Option<String> {
+    let tokens: proc_macro::TokenStream = attr.tokens.clone().into();
+    tokens.into_iter().find_map(|t| match t {
+        proc_macro::TokenTree::Ident(ty) => Some(ty.to_string()),
+        _ => None,
+    })
 }

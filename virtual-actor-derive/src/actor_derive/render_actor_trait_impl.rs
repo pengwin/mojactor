@@ -15,6 +15,7 @@ pub fn render(
     let rendered_envelope_handler = if messages.is_empty() {
         quote_spanned! {
             actor_name.span() =>
+            #[allow(clippy::no_effect_underscore_binding)]
             async fn handle_envelope(
                 &mut self,
                 _envelope: Self::MessagesEnvelope,

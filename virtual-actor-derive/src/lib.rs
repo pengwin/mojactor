@@ -32,7 +32,7 @@ pub fn derive_message(input: TokenStream) -> TokenStream {
 }
 
 /// Derive macro for [`VirtualActor`] trait
-#[proc_macro_derive(VirtualActor)]
+#[proc_macro_derive(VirtualActor, attributes(id_field))]
 pub fn derive_virtual_actor(input: TokenStream) -> TokenStream {
     virtual_actor_derive::virtual_actor_derive(input)
 }

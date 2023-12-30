@@ -9,7 +9,7 @@ use super::{
     render_actor_trait_impl, render_internal_mod,
 };
 
-/// Implentation of derive macro for [`Message`]
+/// Implementation of derive macro for [`Message`]
 pub fn actor_derive(input: TokenStream) -> TokenStream {
     // Parse the input tokens into a syntax tree
     let ast = parse_macro_input!(input as DeriveInput);

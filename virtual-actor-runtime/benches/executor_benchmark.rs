@@ -2,6 +2,7 @@
 #![allow(unused_must_use)]
 #![allow(missing_docs)]
 #![allow(clippy::missing_errors_doc)]
+#![allow(clippy::no_effect_underscore_binding)]
 
 use bench_actor::{AksMessage, BenchActor, DispatchMessage, EchoMessage};
 use criterion::{criterion_group, criterion_main, Criterion};
