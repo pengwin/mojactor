@@ -97,7 +97,17 @@ where
             select! {
                 biased;
                 () = task_ct.cancelled() => Err(ActorTaskError::Cancelled),
+                r = actor.before_message(&envelope, &context) => r.map_err(ActorTaskError::BeforeMessageHookError),
+            }?;
+            select! {
+                biased;
+                () = task_ct.cancelled() => Err(ActorTaskError::Cancelled),
                 r = actor.handle_envelope(envelope, &context) => r.map_err(ActorTaskError::ResponderError),
+            }?;
+            select! {
+                biased;
+                () = task_ct.cancelled() => Err(ActorTaskError::Cancelled),
+                r = actor.after_message(&context) => r.map_err(ActorTaskError::AfterMessageHookError),
             }?;
             self.processed_msg_counter.increment();
         }

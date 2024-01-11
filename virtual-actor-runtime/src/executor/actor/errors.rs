@@ -1,7 +1,7 @@
 //! Error produced by actor task
 
 use tokio::task::JoinError;
-use virtual_actor::errors::ResponderError;
+use virtual_actor::errors::{BoxedActorError, ResponderError};
 
 use crate::address::errors::ActorTaskContainerError;
 
@@ -19,17 +19,23 @@ pub enum ActorTaskError {
     Cancelled,
     /// Actor factory error
     #[error("Actor factory error {0:?}")]
-    ActorFactoryError(Box<dyn std::error::Error + 'static + Send + Sync>),
+    ActorFactoryError(BoxedActorError),
     /// Task join error
     #[error("Task join error {0:?}")]
     TaskJoinError(#[from] JoinError),
+    /// Before message hook error
+    #[error("Before message hook error {0:?}")]
+    BeforeMessageHookError(BoxedActorError),
+    /// After message hook error
+    #[error("After message hook error {0:?}")]
+    AfterMessageHookError(BoxedActorError),
 }
 
 impl ActorTaskError {
     /// Creates new actor factory error
     #[must_use]
     pub fn actor_factory_error<E: std::error::Error + 'static + Send + Sync>(e: E) -> Self {
-        Self::ActorFactoryError(Box::new(e))
+        Self::ActorFactoryError(BoxedActorError::new(e))
     }
 }
 

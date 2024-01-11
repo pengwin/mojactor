@@ -2,9 +2,7 @@ use std::time::Duration;
 
 use virtual_actor_runtime::{prelude::*, GracefulShutdown, VirtualAddr};
 
-use crate::actors::collectable_actor::{
-    CollectableActor, Ping, GetCounter,
-};
+use crate::actors::collectable_actor::{CollectableActor, GetCounter, Ping};
 
 mod actors;
 
@@ -13,7 +11,7 @@ const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(6);
 #[tokio::test]
 async fn actor_gc_test() -> Result<(), Box<dyn std::error::Error>> {
     let gc_interval = Duration::from_millis(100);
-    let idle = gc_interval*5;
+    let idle = gc_interval * 5;
     let mut runtime = Runtime::with_preferences(RuntimePreferences {
         actor_idle_timeout: idle,
         garbage_collect_interval: gc_interval,
@@ -32,7 +30,7 @@ async fn actor_gc_test() -> Result<(), Box<dyn std::error::Error>> {
     let counter = addr.send(GetCounter).await?;
     assert_eq!(counter, 10, "Counter should be 10");
 
-    tokio::time::sleep(idle  + gc_interval*2).await;
+    tokio::time::sleep(idle + gc_interval * 2).await;
 
     let counter = addr.send(GetCounter).await?;
     assert_eq!(counter, 0, "Counter should be 0 after gc");
@@ -51,7 +49,7 @@ async fn actor_gc_test() -> Result<(), Box<dyn std::error::Error>> {
 #[tokio::test]
 async fn actor_gc_refresh_test() -> Result<(), Box<dyn std::error::Error>> {
     let gc_interval = Duration::from_millis(100);
-    let idle = gc_interval*5;
+    let idle = gc_interval * 5;
     let mut runtime = Runtime::with_preferences(RuntimePreferences {
         actor_idle_timeout: idle,
         garbage_collect_interval: gc_interval,
@@ -70,14 +68,14 @@ async fn actor_gc_refresh_test() -> Result<(), Box<dyn std::error::Error>> {
     let counter = addr.send(GetCounter).await?;
     assert_eq!(counter, 10, "Counter should be 10");
 
-    tokio::time::sleep(gc_interval*4).await;
+    tokio::time::sleep(gc_interval * 4).await;
     addr.send(Ping).await?;
-    tokio::time::sleep(gc_interval*4).await;
+    tokio::time::sleep(gc_interval * 4).await;
 
     let counter = addr.send(GetCounter).await?;
     assert_eq!(counter, 11, "Counter should be 11 after refresh");
 
-    tokio::time::sleep(gc_interval*6).await;
+    tokio::time::sleep(gc_interval * 6).await;
 
     let counter = addr.send(GetCounter).await?;
     assert_eq!(counter, 0, "Counter should be 0 after gc");

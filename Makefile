@@ -1,10 +1,13 @@
-.PHONY: build clean lint test run format run-valgrind run-miri
+.PHONY: build clean lint test run format run-valgrind run-miri run-interactive
 
 run: lint
 	cargo run -p test-bench
 
 run-release: lint
 	cargo run -p test-bench --release
+
+run-interactive: lint
+	cargo run -p test-bench --release -- test_qwe
 
 run-valgrind: lint
 	cargo valgrind run -p test-bench

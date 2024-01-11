@@ -2,8 +2,13 @@
 
 use std::future::Future;
 
+use futures::future;
+
 use super::{ActorContext, ActorName};
-use crate::{errors::ResponderError, message::MessageEnvelope};
+use crate::{
+    errors::{BoxedActorError, ResponderError},
+    message::MessageEnvelope,
+};
 
 /// Marker trait for actors
 pub trait Actor: Sized {
@@ -20,6 +25,23 @@ pub trait Actor: Sized {
 
     /// Name of the actor
     fn name() -> ActorName;
+
+    /// Before message processed
+    fn before_message(
+        &mut self,
+        _envelope: &Self::MessagesEnvelope,
+        _ctx: &Self::ActorContext,
+    ) -> impl Future<Output = Result<(), BoxedActorError>> {
+        future::ready(Ok(()))
+    }
+
+    /// After message processed
+    fn after_message(
+        &mut self,
+        _ctx: &Self::ActorContext,
+    ) -> impl Future<Output = Result<(), BoxedActorError>> {
+        future::ready(Ok(()))
+    }
 
     /// Handles message envelope
     fn handle_envelope(

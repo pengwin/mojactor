@@ -13,6 +13,10 @@ impl HelloVirtualMessage {
             msg: msg.to_string(),
         }
     }
+
+    pub fn msg(&self) -> &str {
+        &self.msg
+    }
 }
 
 #[derive(Actor, VirtualActor)]

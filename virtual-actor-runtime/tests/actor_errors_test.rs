@@ -34,7 +34,7 @@ async fn factory_error_test() -> Result<(), Box<dyn std::error::Error>> {
             VirtualAddrError::SpawnError(RuntimeSpawnError::ActorStartError(
                 ActorStartError::ActorTaskError(ActorTaskError::ActorFactoryError(e)),
             )) => {
-                if let Ok(e) = e.downcast::<FactoryError>() {
+                if let Ok(e) = e.downcast_error::<FactoryError>() {
                     assert_eq!(e.message, id, "Error message should be equal");
                 } else {
                     panic!("Should be FactoryError")

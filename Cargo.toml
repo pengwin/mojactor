@@ -5,5 +5,5 @@ members = [
     "virtual-actor",
     "virtual-actor-derive",
     "virtual-actor-runtime",
-    "test-bench", "virtual-actor-runtime",
+    "test-bench", "virtual-actor-runtime", "virtual-actor-persistence",
 ]

@@ -19,11 +19,7 @@ pub struct CollectableActor {
 }
 
 impl MessageHandler<Ping> for CollectableActor {
-    async fn handle(
-        &mut self,
-        _msg: Ping,
-        _ctx: &Self::ActorContext,
-    ) -> <Ping as Message>::Result {
+    async fn handle(&mut self, _msg: Ping, _ctx: &Self::ActorContext) -> <Ping as Message>::Result {
         self.counter += 1;
     }
 }

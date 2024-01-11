@@ -3,19 +3,23 @@
 #![allow(clippy::no_effect_underscore_binding)]
 
 mod hello_actor;
+mod hello_actor_with_state;
 mod hello_virtual_actor;
 mod infinite_loop_actor;
 mod ping_pong_actor;
 mod ping_pong_virtual_actor;
 
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use futures::StreamExt;
 use tokio_util::codec::{FramedRead, LinesCodec};
+use virtual_actor_persistence::InmemoryPersistence;
 use virtual_actor_runtime::errors::WaitError;
 use virtual_actor_runtime::GracefulShutdown;
 use virtual_actor_runtime::{prelude::*, LocalAddr};
 
+use crate::hello_actor_with_state::{HelloActorWithStateFactory, HelloActorWithState};
 use crate::{
     hello_actor::{HelloActor, HelloMessage},
     hello_virtual_actor::{HelloVirtualActor, HelloVirtualMessage},
@@ -301,12 +305,15 @@ async fn test_qwe() -> Result<(), Box<dyn std::error::Error>> {
     let mut runtime = Runtime::new()?;
     let executor = runtime.create_executor()?;
 
-    runtime.register_actor::<HelloVirtualActor>(&executor)?;
+    let persistence = Arc::new(InmemoryPersistence::new());
+    let factory = HelloActorWithStateFactory::new(persistence);
+
+    runtime.register_actor_with_factory(factory, &executor)?;
 
     let num_iteration: u32 = 10_000;
     let start = Instant::now();
     let id = 42;
-    let addr = runtime.spawn_virtual::<HelloVirtualActor>(&id).await?;
+    let addr = runtime.spawn_virtual::<HelloActorWithState>(&id).await?;
 
     let mut line = reader.next().await.transpose()?;
     while let Some(l) = line {
